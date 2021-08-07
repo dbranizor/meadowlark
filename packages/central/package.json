@@ -1,5 +1,5 @@
 {
-  "name": "@meadowlark/central",
+  "name": "@meadowlark-labs/central",
   "version": "0.0.2",
   "description": "> TODO: description",
   "author": "dbranizor <dbranizor@gmail.com>",
@@ -17,5 +17,5 @@
     "tsc": "tsc",
     "test": "echo \"Error: run tests from root\" && exit 1"
   },
-  "gitHead": "f0dd315c191ab6d2303441422dab562fd2b47450"
+  "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca"
 }
