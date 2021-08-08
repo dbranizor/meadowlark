@@ -124,6 +124,7 @@ class Timestamp {
       throw new Timestamp.OverflowError();
     }
 
+    console.log("dingo setting clock", tNew, cNew);
     // Repack the logical time/counter
     clock.timestamp.setMillis(tNew);
     clock.timestamp.setCounter(cNew);
