@@ -20,7 +20,8 @@
   },
   "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca",
   "dependencies": {
-    "murmurhash": "^2.0.0"
+    "murmurhash": "^2.0.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.15.0",
