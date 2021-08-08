@@ -14,8 +14,24 @@
     "lib"
   ],
   "scripts": {
+    "build": "npx rollup -c",
     "tsc": "tsc",
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "test": "jest"
   },
-  "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca"
+  "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca",
+  "dependencies": {
+    "murmurhash": "^2.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.0",
+    "@babel/preset-env": "7.15.0",
+    "babel-core": "^6.26.3",
+    "babel-jest": "^27.0.6",
+    "concurrently": "^6.2.0",
+    "jest": "^27.0.6",
+    "rollup": "^2.56.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0"
+  }
 }

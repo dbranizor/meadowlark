@@ -1,7 +1,12 @@
-'use strict';
+"use strict";
 
-const central = require('..');
+import {Central} from "../src/central"
 
-describe('central', () => {
-    it('needs tests');
+describe("central", () => {
+  it("murmurhash", () => {
+    const val = "hash this";
+    const central = new Central();
+    const hash = central.get(val);
+    expect(hash).toBeDefined()
+  });
 });
