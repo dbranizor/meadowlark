@@ -5,7 +5,6 @@ class Central {
     return "";
   }
 }
-
 class Clock {
   _clock = {};
   constructor(timestamp, merkle = {}) {

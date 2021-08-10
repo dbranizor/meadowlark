@@ -1,5 +1,5 @@
-import { JsxEmit } from "typescript";
 import { MutableTimestamp } from "../src/timestamp";
+
 describe("timestamp", () => {
   it("should create timestamp", (done) => {
     const timestamp = new MutableTimestamp(
@@ -41,7 +41,7 @@ describe("timestamp", () => {
       console.log("dingo", timestampNowWallCurrent.counter());
       expect(timestampNowWallCurrent.counter()).toEqual(0);
       spy.mockClear();
-      done()
+      done();
     }, 1000);
   });
 
@@ -64,16 +64,77 @@ describe("timestamp", () => {
     expect(receivedTimestamp.counter()).toEqual(0);
   });
 
-  it("when remote sends time stamp if timestamp is newer then set TS to remote", () => {
+  it("when remote sends time stamp if timestamp is older then set TS to local", (done) => {
+    const oneMinuteAgo = new Date(new Date() - 1 * 60000);
+    let spy = jest
+      .spyOn(Date, "now")
+      .mockImplementation(() => oneMinuteAgo.getTime());
     const remTS = new MutableTimestamp(Date.now(), 0, "testThere");
-    const fiveMinutesAgo = new Date(new Date() - 5 * 60000);
-    
-    // const recSpy = jest
-    //   .spyOn(Date, "now")
-    //   .mockImplementation(() => fiveMinutesAgo);
-    const locTS = new MutableTimestamp(Date.now(), 0, "testHere");
-    // recSpy.mockRestore();
-    const nowTS = locTS.receive({ timestamp: locTS }, remTS);
-    expect(nowTS.millis()).toEqual(remTS.millis());
+    spy.mockReset();
+    setTimeout(() => {
+      const locTS = new MutableTimestamp(Date.now(), 0, "testHere");
+      // recSpy.mockRestore();
+      const nowTS = locTS.receive({ timestamp: locTS }, remTS);
+      expect(nowTS.millis()).toEqual(locTS.millis());
+      expect(nowTS.counter()).toEqual(0);
+      done();
+    }, 100);
+  });
+
+  it("when remote sends time stamp if timestamp is newer then set ts to remote and bump counter", () => {
+    const remoteTSOne = new MutableTimestamp(Date.now(), 0, "testThere");
+    const remoteTSTwo = new MutableTimestamp(Date.now(), 0, "testThere");
+
+    const oneMinuteAgo = new Date(new Date() - 1 * 60000);
+    let spy = jest
+      .spyOn(Date, "now")
+      .mockImplementation(() => oneMinuteAgo.getTime());
+
+    const localTS = new MutableTimestamp(Date.now(), 0, "testHere");
+    const receivedFastTS = localTS.receive({ timestamp: localTS }, remoteTSOne);
+    const receivedFastTSTwo = localTS.receive(
+      {
+        timestamp: new MutableTimestamp(
+          receivedFastTS.millis(),
+          receivedFastTS.counter(),
+          receivedFastTS.node()
+        ),
+      },
+      remoteTSTwo
+    );
+    expect(receivedFastTS.millis()).toEqual(remoteTSOne.millis());
+    expect(receivedFastTS.counter()).toEqual(1);
+    expect(receivedFastTSTwo.millis()).toEqual(remoteTSTwo.millis());
+    expect(receivedFastTSTwo.counter()).toEqual(2);
+    spy.mockReset();
+
+    const localTSNow = new MutableTimestamp(Date.now(), 0, "testHere");
+    const receivedCurrentTS = localTS.receive(
+      { timestamp: localTSNow },
+      remoteTSOne
+    );
+
+    expect(receivedCurrentTS.millis()).toEqual(localTSNow.millis());
+    expect(receivedCurrentTS.counter()).toEqual(0);
+  });
+
+  it("when timestamp is set if hash method is ran the value is a repeatable hash", () => {
+    const timestamp = new MutableTimestamp(Date.now(), 0, "timestamp");
+
+    const hashOne = timestamp.hash();
+    const hashTwo = timestamp.hash();
+    expect(hashOne).toBeDefined();
+    expect(hashTwo).toBeDefined();
+    expect(hashOne).toEqual(hashOne);
+
+    const timestampReceived = timestamp.send({
+      timestamp: new MutableTimestamp(Date.now(), 0, "timestamp"),
+    });
+    const hashThree = timestampReceived.hash();
+    const hashFour = timestampReceived.hash();
+    expect(hashThree).toBeDefined();
+    expect(hashFour).toBeDefined();
+    expect(hashThree === hashFour).toBeTruthy();
+    expect(hashThree === hashOne).toBeFalsy();
   });
 });
