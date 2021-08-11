@@ -1,20 +1,27 @@
 import { MutableTimestamp, Timestamp } from "./timestamp";
 import { v4 } from "uuid";
-import webWorkerString from "../lib/sync.js"
+import webWorkerString from "../lib/sync.js";
 import { EVENTS } from "./enum";
 
-
-
-
-
-class Central {
+class Sync {
+  static worker;
   static init() {
+    console.log("Creating blob");
     const blob = new Blob([webWorkerString]);
-    const workerUrl = URL.createObjectURL(workerBlob);
-    const worker = new Worker(workerUrl);
+    const workerUrl = URL.createObjectURL(blob);
+    this.worker = new Worker(workerUrl);
+    console.log("Started Worker With Blob");
+    this.worker.postMessage(EVENTS.START_SYNC);
+    this.worker.onmessage = (e) => console.log("Received Message From Worker");
+  }
+  static start(){
+    console.log("Started Worker From Client");
+    this.worker.postMessage(EVENTS.START_SYNC);
+  }
 
-    worker.postMessage(EVENTS.START_SYNC);
-    worker.onmessage = (e => console.log('Received Message From Worker', e))
+  static stop(){
+    console.log("Stopped Worker From Client");
+    this.worker.postMessage(EVENTS.STOP_SYNC);
   }
 }
 class Clock {
@@ -36,4 +43,4 @@ class Utilities {
   }
 }
 
-export { Central, Clock, Utilities };
+export { Sync, Clock, Utilities };

@@ -1,4 +1,4 @@
-import murmur from "murmurhash";
+import murmur from "../deps/murmurhash.mjs";
 
 const timestampNumbers = (millis, counter) => !isNaN(millis) && !isNaN(counter);
 const invalidTimestampString = (timestamp) => typeof timestamp !== "string";

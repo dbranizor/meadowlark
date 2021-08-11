@@ -1,8 +1,9 @@
 import resolve from "rollup-plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
-import { terser } from 'rollup-plugin-terser';
+import { terser } from "rollup-plugin-terser";
 import pkg from "./package.json";
 import babel from "rollup-plugin-babel";
+import nodeResolve from "rollup-plugin-node-resolve";
 
 export default [
   // browser-friendly UMD build
@@ -28,20 +29,20 @@ export default [
         },
       }),
       {
-        name: 'worker-to-string',
+        name: "worker-to-string",
         renderChunk(code) {
           return `export default '${code}';`;
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
   {
     input: "src/central.js",
     external: [],
     output: {
       file: "lib/central.js",
-      format: "iife",
-    }
+      format: "esm",
+    },
+    plugins: [nodeResolve()],
   },
 ];
- 
