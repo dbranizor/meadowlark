@@ -1,8 +1,20 @@
 import { MutableTimestamp, Timestamp } from "./timestamp";
 import { v4 } from "uuid";
+import webWorkerString from "../lib/sync.js"
+import { EVENTS } from "./enum";
+
+
+
+
+
 class Central {
-  get(string) {
-    return "";
+  static init() {
+    const blob = new Blob([webWorkerString]);
+    const workerUrl = URL.createObjectURL(workerBlob);
+    const worker = new Worker(workerUrl);
+
+    worker.postMessage(EVENTS.START_SYNC);
+    worker.onmessage = (e => console.log('Received Message From Worker', e))
   }
 }
 class Clock {

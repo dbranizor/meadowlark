@@ -1,5 +1,6 @@
 import resolve from "rollup-plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
+import { terser } from 'rollup-plugin-terser';
 import pkg from "./package.json";
 import babel from "rollup-plugin-babel";
 
@@ -16,7 +17,31 @@ export default [
     external: [],
     output: {
       file: "lib/sync.js",
-      format: "iife",
+      format: "esm",
     },
+    plugins: [
+      resolve(),
+      terser({
+        warnings: true,
+        mangle: {
+          module: true,
+        },
+      }),
+      {
+        name: 'worker-to-string',
+        renderChunk(code) {
+          return `export default '${code}';`;
+        }
+      }
+    ]
+  },
+  {
+    input: "src/central.js",
+    external: [],
+    output: {
+      file: "lib/central.js",
+      format: "iife",
+    }
   },
 ];
+ 
