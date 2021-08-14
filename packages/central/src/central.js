@@ -1,27 +1,41 @@
 import { MutableTimestamp, Timestamp } from "./timestamp";
-import { v4 } from "uuid";
 import webWorkerString from "../lib/sync.js";
 import { EVENTS } from "./enum";
 
 class Sync {
   static worker;
-  static init() {
+  static init(config = { group: 385 }) {
     console.log("Creating blob");
     const blob = new Blob([webWorkerString]);
     const workerUrl = URL.createObjectURL(blob);
+    console.log("Starting Worker With Blob");
     this.worker = new Worker(workerUrl);
-    console.log("Started Worker With Blob");
-    this.worker.postMessage(EVENTS.START_SYNC);
+
+    this.worker.postMessage({ msg: EVENTS.ADD_GROUP, payload: config.group });
+
+    this.worker.postMessage({ msg: EVENTS.START_SYNC });
     this.worker.onmessage = (e) => console.log("Received Message From Worker");
   }
-  static start(){
+  static start() {
     console.log("Started Worker From Client");
-    this.worker.postMessage(EVENTS.START_SYNC);
+    this.worker.postMessage({ msg: EVENTS.START_SYNC });
   }
 
-  static stop(){
+  static stop() {
     console.log("Stopped Worker From Client");
-    this.worker.postMessage(EVENTS.STOP_SYNC);
+    this.worker.postMessage({ msg: EVENTS.STOP_SYNC });
+  }
+
+  static addGroup(group) {
+    this.worker.postMessage({ msg: EVENTS.ADD_GROUP, payload: group });
+  }
+
+  static addSchema(schema) {
+    console.log("Adding Schema From Client");
+    this.worker.postMessage({
+      msg: EVENTS.ADD_SCHEMA,
+      payload: { alerts: [] },
+    });
   }
 }
 class Clock {
@@ -37,10 +51,4 @@ class Clock {
   }
 }
 
-class Utilities {
-  makeClientId() {
-    return v4().replace(/-/g, "").slice(-16);
-  }
-}
-
-export { Sync, Clock, Utilities };
+export { Sync, Clock };

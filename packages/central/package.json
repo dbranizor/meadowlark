@@ -14,13 +14,19 @@
     "lib"
   ],
   "scripts": {
+    "preBuild": "npx rollup rollup.webworker.config.js -c",
     "build": "npx rollup -c",
     "tsc": "tsc",
     "test": "jest"
   },
   "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca",
   "dependencies": {
+    "@surma/rollup-plugin-comlink": "^0.4.0",
+    "@surma/rollup-plugin-off-main-thread": "^2.2.2",
+    "comlink": "^4.3.1",
     "murmurhash": "^2.0.0",
+    "rxjs": "^6.6.7",
+    "svelte": "^3.42.1",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

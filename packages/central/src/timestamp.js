@@ -148,6 +148,9 @@ class Timestamp {
     return isoString + "-0000-0000000000000000";
   }
 
+  static makeClock(timestamp, merkle = {}) {
+    return { timestamp: MutableTimestamp.from(timestamp), merkle };
+  }
   static DuplicateNodeError() {
     return class extends Error {
       constructor(node) {

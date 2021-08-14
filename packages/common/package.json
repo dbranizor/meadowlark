@@ -1,0 +1,30 @@
+{
+  "name": "@meadowlark/common",
+  "version": "0.0.3",
+  "description": "> TODO: description",
+  "author": "dbranizor <dbranizor@gmail.com>",
+  "homepage": "https://github.com/dbranizor/meadowlark#readme",
+  "license": "ISC",
+  "main": "lib/common.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dbranizor/meadowlark.git"
+  },
+  "scripts": {
+    "build": "npx rollup -c",
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/dbranizor/meadowlark/issues"
+  },
+  "devDependencies": {
+    "rollup-plugin-node-resolve": "^5.2.0"
+  }
+}

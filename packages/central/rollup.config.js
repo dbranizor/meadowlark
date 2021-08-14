@@ -1,10 +1,6 @@
 import resolve from "rollup-plugin-node-resolve";
-import commonjs from "rollup-plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
-import pkg from "./package.json";
-import babel from "rollup-plugin-babel";
-import nodeResolve from "rollup-plugin-node-resolve";
-
+import commonJS from "rollup-plugin-commonjs";
 export default [
   // browser-friendly UMD build
   // CommonJS (for Node) and ES module (for bundlers) build.
@@ -14,11 +10,10 @@ export default [
   // an array for the `output` option, where we can specify
   // `file` and `format` for each target)
   {
-    input: "src/sync.js",
-    external: [],
+    input: "src/sync/index.js",
     output: {
       file: "lib/sync.js",
-      format: "esm",
+      format: "iife",
     },
     plugins: [
       resolve(),
@@ -43,6 +38,6 @@ export default [
       file: "lib/central.js",
       format: "esm",
     },
-    plugins: [nodeResolve()],
+    plugins: [resolve()],
   },
 ];

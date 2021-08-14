@@ -1,21 +1,23 @@
 {
-  "name": "@meadowlark-labs/santa-fe",
-  "version": "0.0.3",
-  "description": "> TODO: description",
-  "author": "dbranizor <dbranizor@gmail.com>",
-  "homepage": "",
-  "license": "ISC",
-  "main": "lib/santa-fe.js",
-  "directories": {
-    "lib": "lib",
-    "test": "__tests__"
-  },
-  "files": [
-    "lib"
-  ],
+  "name": "svelte-app",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "tsc": "tsc",
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "start": "sirv lib --no-clear"
   },
-  "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca"
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-node-resolve": "^11.0.0",
+    "rollup": "^2.3.4",
+    "rollup-plugin-css-only": "^3.1.0",
+    "rollup-plugin-livereload": "^2.0.0",
+    "rollup-plugin-svelte": "^7.0.0",
+    "rollup-plugin-terser": "^7.0.0",
+    "svelte": "^3.0.0"
+  },
+  "dependencies": {
+    "sirv-cli": "^1.0.0"
+  }
 }
