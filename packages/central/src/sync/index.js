@@ -1,8 +1,23 @@
-// import { v4 } from "uuid";
-import { EVENTS } from "../enum";
-
 import { Timestamp, MutableTimestamp } from "../timestamp";
-import { v4 } from "uuid";
+
+const v4 = () => {
+  let s4 = () => {
+      return Math.floor((1 + Math.random()) * 0x10000)
+          .toString(16)
+          .substring(1);
+  }
+  //return id of format 'aaaaaaaa'-'aaaa'-'aaaa'-'aaaa'-'aaaaaaaaaaaa'
+  return (s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4()).replace(/-/g, "").slice(-16);
+}
+
+
+const logger = (config = { logging: "debug" }) =>
+  config.logging === "debug" ? console.log : () => {};
+
+const makeClientId = (uuid) => {
+  return uuid().replace(/-/g, "").slice(-16);
+};
+
 
 class RestClient {
   logger;
@@ -104,12 +119,7 @@ const errorHandling = (status) => {
     throw Error(status.statusText);
   }
 };
-const logger = (config = { logging: "debug" }) =>
-  config.logging === "debug" ? console.log : () => {};
 
-const makeClientId = (uuid) => {
-  return uuid().replace(/-/g, "").slice(-16);
-};
 
 let _onSync = null;
 let _syncEnabled;
