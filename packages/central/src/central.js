@@ -4,15 +4,14 @@ import { EVENTS } from "./enum";
 
 class Sync {
   static worker;
+
   static init(config = { group: 385 }) {
     console.log("Creating blob");
     const blob = new Blob([webWorkerString]);
     const workerUrl = URL.createObjectURL(blob);
     console.log("Starting Worker With Blob");
     this.worker = new Worker(workerUrl);
-
     this.worker.postMessage({ msg: EVENTS.ADD_GROUP, payload: config.group });
-
     this.worker.postMessage({ msg: EVENTS.START_SYNC });
     this.worker.onmessage = (e) => console.log("Received Message From Worker");
   }
@@ -34,7 +33,7 @@ class Sync {
     console.log("Adding Schema From Client");
     this.worker.postMessage({
       msg: EVENTS.ADD_SCHEMA,
-      payload: { alerts: [] },
+      payload: schema,
     });
   }
 }

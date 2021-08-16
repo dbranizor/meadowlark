@@ -1,15 +1,29 @@
-import { Timestamp, MutableTimestamp } from "../timestamp";
+import { Timestamp } from "../timestamp";
 
-const v4 = () => {
+function v4() {
   let s4 = () => {
-      return Math.floor((1 + Math.random()) * 0x10000)
-          .toString(16)
-          .substring(1);
-  }
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  };
   //return id of format 'aaaaaaaa'-'aaaa'-'aaaa'-'aaaa'-'aaaaaaaaaaaa'
-  return (s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4()).replace(/-/g, "").slice(-16);
+  return (
+    s4() +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    s4() +
+    s4()
+  )
+    .replace(/-/g, "")
+    .slice(-16);
 }
-
 
 const logger = (config = { logging: "debug" }) =>
   config.logging === "debug" ? console.log : () => {};
@@ -17,7 +31,6 @@ const logger = (config = { logging: "debug" }) =>
 const makeClientId = (uuid) => {
   return uuid().replace(/-/g, "").slice(-16);
 };
-
 
 class RestClient {
   logger;
@@ -120,7 +133,6 @@ const errorHandling = (status) => {
   }
 };
 
-
 let _onSync = null;
 let _syncEnabled;
 
@@ -189,10 +201,8 @@ const syncerFactory = () => {
   };
 };
 
-const syncer = syncerFactory();
-
 self.addEventListener("message", (event) => {
-  console.log(event);
+  const syncer = syncerFactory();
   switch (event.data.msg) {
     case "APPLY":
       console.log("WebWorker: StartSync");
@@ -202,17 +212,25 @@ self.addEventListener("message", (event) => {
       console.log("WebWorker: StopSync");
       self.postMessage("Sync-Stopped");
       break;
+    case "START_SYNC":
+      console.log("WebWorker: StopSync");
+      self.postMessage("Sync-Stopped");
+      break;
     case "ADD_SCHEMA":
       console.log("WebWorker: AddingSchema");
+      Object.keys(event.data.payload).forEach((name) =>
+        syncer.addSchema(name, event.data.payload[name])
+      );
+
       // SchemaStore.add(event.data.payload);
-      console.log("WebWorker Added Schema", event.data.payload);
+      console.log("WebWorker Added Schema", SyncerContext._schema);
     case "ADD_GROUP":
       console.log("WebWorker Added Group: ", {
         id: event.data.payload,
         name: event.data.payload,
-        clock: Timestamp.makeClock(new Timestamp(0, 0, makeClientId(v4()))),
+        clock: Timestamp.makeClock(new Timestamp(0, 0, v4())),
       });
-      syncer.add(event.data.payload);
+      syncer.addGroup(event.data.payload);
       syncer.addSelection("group", event.data.payload);
       // GroupStore.add({
       //   id: event.data.payload,
