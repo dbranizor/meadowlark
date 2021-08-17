@@ -36,7 +36,7 @@ export default [
     external: [],
     output: {
       file: "lib/central.js",
-      format: "esm",
+      format: "cjs",
     },
     plugins: [resolve()],
   },

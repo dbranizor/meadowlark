@@ -1,4 +1,5 @@
 import { MutableTimestamp, Timestamp } from "./timestamp";
+import * as merkle from "./merkle";
 import webWorkerString from "../lib/sync.js";
 import { EVENTS } from "./enum";
 
@@ -50,4 +51,4 @@ class Clock {
   }
 }
 
-export { Sync, Clock };
+export { Sync, Clock, Timestamp, merkle };
