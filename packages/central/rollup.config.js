@@ -26,7 +26,7 @@ export default [
       {
         name: "worker-to-string",
         renderChunk(code) {
-          return `export default '${code}';`;
+          return `export default '${code}'`;
         },
       },
     ],

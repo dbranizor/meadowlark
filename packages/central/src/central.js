@@ -6,12 +6,13 @@ import { EVENTS } from "./enum";
 class Sync {
   static worker;
 
-  static init(config = { group: 385 }) {
+  static init(config = { group: 385, syncHost: "localhost:8080", mode: false }) {
     console.log("Creating blob");
     const blob = new Blob([webWorkerString]);
     const workerUrl = URL.createObjectURL(blob);
-    console.log("Starting Worker With Blob");
+    console.log("Starting Worker With Blob Again", config);
     this.worker = new Worker(workerUrl);
+    this.worker.postMessage({ msg: EVENTS.INIT, payload: config });
     this.worker.postMessage({ msg: EVENTS.ADD_GROUP, payload: config.group });
     this.worker.postMessage({ msg: EVENTS.START_SYNC });
     this.worker.onmessage = (e) => console.log("Received Message From Worker");
@@ -38,17 +39,5 @@ class Sync {
     });
   }
 }
-class Clock {
-  _clock = {};
-  constructor(timestamp, merkle = {}) {
-    this._clock = { timestamp: MutableTimestamp.from(timestamp), merkle };
-  }
-  get clock() {
-    return this._clock;
-  }
-  set clock(clock) {
-    this._clock = clock;
-  }
-}
 
-export { Sync, Clock, Timestamp, merkle };
+export { Sync, Timestamp, merkle };

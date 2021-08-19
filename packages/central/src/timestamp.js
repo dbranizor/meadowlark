@@ -81,7 +81,7 @@ class Timestamp {
     );
   }
 
-  receive(clock, msg) {
+  static receive(clock, msg) {
     const phys = Date.now();
 
     // Unpack the message wall time/counter

@@ -1,5 +1,5 @@
 import { Timestamp } from "../timestamp";
-
+import * as merkle from "../merkle";
 function v4() {
   let s4 = () => {
     return Math.floor((1 + Math.random()) * 0x10000)
@@ -41,7 +41,7 @@ class RestClient {
   json;
 
   async get(url) {
-    this.logger("Running Get Fetch ", url);
+    this.logger("Running Get Fetch ", this, url);
     const status = await fetch(computeUrl.call(this, url));
     this.logger("Running Get Error Handling");
     errorHandling(status);
@@ -66,7 +66,8 @@ class RestClient {
     return true;
   }
   async post(url, params) {
-    this.logger("Running Post Error Handling");
+    this.logger("Running Post Error Handling", this, url);
+    console.log(`Syncing: ${computeUrl.call(this, url)}`);
     const status = await fetch(computeUrl.call(this, url), {
       method: "POST",
       mode: "cors",
@@ -143,6 +144,10 @@ let _messageCollection;
 let _schema;
 const unsubscribes = [];
 const SyncerContext = {
+  _config: {},
+  _syncInterval: false,
+  _syncEntity: false,
+  _host: "",
   _selectedGroup: "",
   _groups: [],
   _messageCollection: {},
@@ -154,6 +159,11 @@ const syncerFactory = () => {
   const methods = {
     addGroup(group) {
       SyncerContext._groups = [...SyncerContext._groups, group];
+    },
+    updateGroup(group) {
+      SyncerContext._groups = SyncerContext._groups.map((g) =>
+        g.id === group.id ? group : g
+      );
     },
     addMessageBatch(messages, group) {
       const oldMessages = _messageCollection[group] || [];
@@ -186,7 +196,7 @@ const syncerFactory = () => {
     },
     async post(data) {
       const res = await restClient.post(
-        "/sync",
+        "sync",
         Object.assign(data, { group_id: _selectedGroup })
       );
 
@@ -204,18 +214,26 @@ const syncerFactory = () => {
 self.addEventListener("message", (event) => {
   const syncer = syncerFactory();
   switch (event.data.msg) {
+    case "INIT":
+      SyncerContext._config = Object.assign(
+        { mode: false },
+        event.data.payload
+      );
+      break;
     case "APPLY":
       console.log("WebWorker: StartSync");
     // self.postMessage("Sync-Done");
     // break;
+    case "START_SYNC":
+      console.log("WebWorker: StartSync");
+      backgroundSync.call(self);
+      self.postMessage("Sync-Started");
+      break;
     case "STOP_SYNC":
       console.log("WebWorker: StopSync");
       self.postMessage("Sync-Stopped");
       break;
-    case "START_SYNC":
-      console.log("WebWorker: StopSync");
-      self.postMessage("Sync-Stopped");
-      break;
+
     case "ADD_SCHEMA":
       console.log("WebWorker: AddingSchema");
       Object.keys(event.data.payload).forEach((name) =>
@@ -230,7 +248,11 @@ self.addEventListener("message", (event) => {
         name: event.data.payload,
         clock: Timestamp.makeClock(new Timestamp(0, 0, v4())),
       });
-      syncer.addGroup(event.data.payload);
+      syncer.addGroup({
+        id: event.data.payload,
+        name: event.data.payload,
+        clock: Timestamp.makeClock(new Timestamp(0, 0, makeClientId(v4))),
+      });
       syncer.addSelection("group", event.data.payload);
       // GroupStore.add({
       //   id: event.data.payload,
@@ -243,3 +265,119 @@ self.addEventListener("message", (event) => {
       console.log("Error: Debug Problem", event.data);
   }
 });
+
+function backgroundSync() {
+  SyncerContext._syncInterval = setInterval(async () => {
+    try {
+      await sync();
+      this.postMessage("IS_ONLINE");
+    } catch (error) {
+      console.error("Error: ", error);
+      this.postMessage("IS_OFFLINE");
+    }
+  }, 3999);
+}
+
+async function sync(initialMessages = [], since = null) {
+  const log = logger(SyncerContext._config);
+  log("Starting Sync");
+  const groupMessages = SyncerContext._messageCollection[
+    SyncerContext._selectedGroup
+  ]
+    ? SyncerContext._messageCollection[SyncerContext._selectedGroup]
+    : [];
+
+  let messages = initialMessages;
+
+  if (since) {
+    const timestamp = new Timestamp(since, 0, "0").toString();
+    messages = groupMessages.filter((msg) => msg.timestamp >= timestamp);
+  }
+  let result;
+  try {
+    console.log(
+      "dingo this is the clock",
+      SyncerContext._groups.find((g) => g.id === SyncerContext._selectedGroup),
+      SyncerContext._groups
+        .find((g) => g.id === SyncerContext._selectedGroup)
+        .clock.timestamp.node()
+    );
+    result = await new RestClient(SyncerContext._config).post("sync", {
+      group_id: SyncerContext._selectedGroup,
+      client_id: SyncerContext._groups
+        .find((g) => g.id === SyncerContext._selectedGroup)
+        .clock.timestamp.node(),
+      messages,
+      merkle: SyncerContext._groups.find(
+        (g) => SyncerContext._selectedGroup === g.id
+      ),
+    });
+  } catch (err) {
+    throw new Error(`network-failure: ${err}`);
+  }
+  const selectedGroup = SyncerContext._groups.find(
+    (g) => g.id === SyncerContext._selectedGroup
+  );
+  log(`SelectedGroup ${JSON.stringify(selectedGroup)}`);
+  log(
+    `Merkle ${JSON.stringify(result)} ------ ${JSON.stringify(
+      selectedGroup.clock.merkle
+    )}`
+  );
+
+  let diffTime = merkle.diff(result.merkle, selectedGroup.clock.merkle);
+
+  // if (diffTime) {
+  //   if (since && since === diffTime) {
+  //     throw new Error(
+  //       `An Error Occured. Sync Has Failed. This Error Should Not Have Happened!`
+  //     );
+  //   }
+  //   return sync([], diffTime);
+  // }
+}
+
+function recieveMessages(messages) {
+  const selectedGroup = SyncerContext._groups.find(
+    (g) => g.id === SyncerContext._selectedGroup
+  );
+
+  messages.forEach((msg) => {
+    Timestamp.receive(selectedGroup.clock, Timestamp.parse(msg.timestamp));
+  });
+}
+
+function applyMessages(messages) {
+  let groupMessages = groupMessages();
+
+  // let existingMessages =
+}
+
+function compareMessages(messages) {
+  const existingMessages = new Map();
+  let groupMessages = groupMessages();
+  let sortedMessages = [...groupMessages].sort((m1, m2) => {
+    if (m1.timestamp < m2.timestamp) {
+      return 1;
+    } else if (m1.timestamp > m2.timestamp) {
+      return -1;
+    }
+    return 0;
+  });
+  messages.forEach((msg1) => {
+    let existingMsg = sortedMessages.find(
+      (msg2) =>
+        msg1.dataset === msg2.dataset &&
+        msg1.row === msg2.row &&
+        msg1.column === msg2.column
+    );
+    existingMessages.set(msg1, existingMsg);
+  });
+  return existingMessages;
+}
+
+function groupMessages() {
+  return SyncerContext._messageCollection[SyncerContext._selectedGroup]
+    ? SyncerContext._messageCollection[SyncerContext._selectedGroup]
+    : [];
+}

@@ -5,4 +5,5 @@ export class EVENTS {
   static CHANGE_GROUP = "CHANGE_GROUP";
   static ADD_GROUP = "ADD_GROUP";
   static ADD_SCHEMA = "ADD_SCHEMA";
+  static INIT = "INIT";
 }

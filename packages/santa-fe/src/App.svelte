@@ -1,5 +1,16 @@
 <script>
+	import {Sync} from "@meadowlark-labs/central"
+	import {onMount} from "svelte"
 	export let name;
+	onMount(() => {
+		Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
+		Sync.addSchema({
+			event: [],
+			coe: []
+		})
+		Sync.addGroup("home")
+		Sync.start()
+	})
 </script>
 
 <main>
