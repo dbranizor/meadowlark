@@ -1,5 +1,6 @@
 import { Timestamp } from "../timestamp";
 import * as merkle from "../merkle";
+import { Sync } from "../../lib/central";
 function v4() {
   let s4 = () => {
     return Math.floor((1 + Math.random()) * 0x10000)
@@ -325,16 +326,20 @@ async function sync(initialMessages = [], since = null) {
     )}`
   );
 
+  if (result.messages.length > 0) {
+    receiveMessages(result.messages);
+  }
+
   let diffTime = merkle.diff(result.merkle, selectedGroup.clock.merkle);
 
-  // if (diffTime) {
-  //   if (since && since === diffTime) {
-  //     throw new Error(
-  //       `An Error Occured. Sync Has Failed. This Error Should Not Have Happened!`
-  //     );
-  //   }
-  //   return sync([], diffTime);
-  // }
+  if (diffTime) {
+    if (since && since === diffTime) {
+      throw new Error(
+        `An Error Occured. Sync Has Failed. This Error Should Not Have Happened!`
+      );
+    }
+    return sync([], diffTime);
+  }
 }
 
 function recieveMessages(messages) {
@@ -345,17 +350,29 @@ function recieveMessages(messages) {
   messages.forEach((msg) => {
     Timestamp.receive(selectedGroup.clock, Timestamp.parse(msg.timestamp));
   });
+
+  applyMessages(messages)
 }
 
 function applyMessages(messages) {
   let groupMessages = groupMessages();
 
-  // let existingMessages =
+  let existingMessages = compareMessages(messages);
+  let clock = getGroupClock();
+
+  messages.forEach((msg) => {
+    let existingMsg = existingMessages.get(msg)
+
+    if(!existingMsg || existingMsg.timestamp < msg.timestamp){
+      // apply
+    }
+  })
+
 }
 
 function compareMessages(messages) {
   const existingMessages = new Map();
-  let groupMessages = groupMessages();
+  let groupMessages = getGroupMessages();
   let sortedMessages = [...groupMessages].sort((m1, m2) => {
     if (m1.timestamp < m2.timestamp) {
       return 1;
@@ -376,8 +393,28 @@ function compareMessages(messages) {
   return existingMessages;
 }
 
-function groupMessages() {
+function getGroupMessages() {
   return SyncerContext._messageCollection[SyncerContext._selectedGroup]
     ? SyncerContext._messageCollection[SyncerContext._selectedGroup]
     : [];
 }
+function getGroupClock(){
+  return SyncerContext._groups.find(g => g.id === SyncerContext._selectedGroup).clock
+}
+
+function apply(msg){
+  let table = SyncerContext._schema[msg.dataset];
+  if(!table){
+    throw new Error("Unkown  Datasert: " + msg.dataset)
+  }
+
+  let row = table.find((row) => row.id === msg.row);
+
+  if (!row) {
+    table.push({ id: msg.row, [msg.column]: msg.value });
+  } else {
+    row[msg.column] = msg.value;
+  }
+
+}
+
