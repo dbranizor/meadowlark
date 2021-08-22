@@ -1,21 +1,70 @@
 <script>
 	import {Sync} from "@meadowlark-labs/central"
+	import Toasters from "./Toasters.svelte"
 	import {onMount} from "svelte"
+
+	let events = [{
+		type: "test",
+		payload: "This is just a test"
+	}, {
+		type: "email",
+		payload: "Check your emails"
+	}]
+	let displayedEvents = [];
+	let newType = false;;
+	let newMessage = false;
 	export let name;
+	$: if(newMessage){
+		if(newType){
+			
+		}
+	}
 	onMount(() => {
+
+		/**Test dingo code*/
+		displayedEvents = [...events]
+
 		Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
 		Sync.addSchema({
 			event: [],
 			coe: []
 		})
 		Sync.addGroup("home")
+		Sync.selectGroup("home")
 		Sync.start()
+	
 	})
 </script>
 
 <main>
-	<h1>Hello {name}!</h1>
-	<p>Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte apps.</p>
+
+	 <div class="flex">
+		<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
+		<div class="ml-auto">
+			<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />
+			<input class="border-b border-blue-500"  bind:value={newMessage} placeholder="Message" />
+		</div>
+	 </div>
+	 <div class="flex justify-end h-full w-full mr-2 mt-2">
+		<ul>
+			{#each displayedEvents as event}
+			<li>
+				<Toasters type="info" display={true} id={event.type} 
+				on:CLEAR_TOASTER={() => displayedEvents = displayedEvents.filter(d => d.type !== event.type)} >
+					<span slot="header">
+						{event.type}
+					</span>
+					<span slot="body">{event.payload}</span>
+				</Toasters>
+			</li>
+
+		{/each}
+		</ul>
+
+
+	</div>
+	
+
 </main>
 
 <style>

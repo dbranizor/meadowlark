@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "build:tailwind" : "postcss css/tailwind.css -o public/tailwind-out.css",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public --no-clear"
@@ -18,6 +19,11 @@
     "svelte": "^3.0.0"
   },
   "dependencies": {
-    "sirv-cli": "^1.0.0"
+    "@tailwindcss/custom-forms": "^0.2.1",
+    "postcss": "^8.3.6",
+    "postcss-cli": "^8.3.1",
+    "postcss-load-config": "^3.1.0",
+    "sirv-cli": "^1.0.0",
+    "tailwindcss": "^1.9.6"
   }
 }

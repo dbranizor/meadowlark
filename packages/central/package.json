@@ -21,8 +21,10 @@
   },
   "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca",
   "dependencies": {
+    "@jlongster/sql.js": "^1.6.7",
     "@surma/rollup-plugin-comlink": "^0.4.0",
     "@surma/rollup-plugin-off-main-thread": "^2.2.2",
+    "absurd-sql": "^0.0.53",
     "comlink": "^4.3.1",
     "murmurhash": "^2.0.0",
     "rxjs": "^6.6.7",
@@ -39,7 +41,9 @@
     "rollup": "^2.56.0",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-external-globals": "^0.6.1",
     "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2"
   }
 }

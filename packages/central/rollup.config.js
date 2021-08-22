@@ -1,6 +1,5 @@
 import resolve from "rollup-plugin-node-resolve";
 import { terser } from "rollup-plugin-terser";
-import commonJS from "rollup-plugin-commonjs";
 export default [
   // browser-friendly UMD build
   // CommonJS (for Node) and ES module (for bundlers) build.
@@ -12,6 +11,10 @@ export default [
   {
     input: "src/sync/index.js",
     output: {
+      globals: {
+        'initSqlJs' : 'initSqlJs'
+      },
+      sourcemap: true,
       file: "lib/sync.js",
       format: "iife",
     },
@@ -30,11 +33,14 @@ export default [
         },
       },
     ],
+
+    external: ['initSqlJs']
   },
   {
     input: "src/central.js",
     external: [],
     output: {
+      globals: { "@jlongster/sql.js": "@jlongster/sql.js" },
       file: "lib/central.js",
       format: "cjs",
     },
