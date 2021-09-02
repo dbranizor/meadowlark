@@ -1,7 +1,8 @@
 <script>
-	import {Sync} from "@meadowlark-labs/central"
 	import Toasters from "./Toasters.svelte"
 	import {onMount} from "svelte"
+	import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
+	
 
 	let events = [{
 		type: "test",
@@ -23,15 +24,21 @@
 
 		/**Test dingo code*/
 		displayedEvents = [...events]
+		const worker = new Worker(new URL('../dep/sync.js', import.meta.url));
+		console.log('dingo starting worker')
 
-		Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
-		Sync.addSchema({
-			event: [],
-			coe: []
-		})
-		Sync.addGroup("home")
-		Sync.selectGroup("home")
-		Sync.start()
+		initBackend(worker);
+		console.log('dingo running UI Invoke')
+		worker.postMessage({ type: 'ui-invoke', name: 'init' });
+
+		// Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
+		// Sync.addSchema({
+		// 	event: [],
+		// 	coe: []
+		// })
+		// Sync.addGroup("home")
+		// Sync.selectGroup("home")
+		// Sync.start()
 	
 	})
 </script>
@@ -39,7 +46,7 @@
 <main>
 
 	 <div class="flex">
-		<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
+		<h1 class="text-blue-500 leading-tight">Santa-Fe TESTdi</h1>
 		<div class="ml-auto">
 			<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />
 			<input class="border-b border-blue-500"  bind:value={newMessage} placeholder="Message" />
