@@ -37,6 +37,11 @@ function init() {
   ready = _init();
 }
 
+
+function createTables(){
+  
+}
+
 function output(msg) {
   self.postMessage({ type: 'output', msg });
 }
