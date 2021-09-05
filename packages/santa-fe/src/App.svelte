@@ -2,8 +2,10 @@
 	import Toasters from "./Toasters.svelte"
 	import {onMount} from "svelte"
 	import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
-	
+	import {insert, start, setWorker} from "@meadowlark-labs/central"
 
+
+	start()
 	let events = [{
 		type: "test",
 		payload: "This is just a test"
@@ -12,24 +14,70 @@
 		payload: "Check your emails"
 	}]
 	let displayedEvents = [];
-	let newType = false;;
-	let newMessage = false;
+	let newType = "";;
+	let newMessage = "";
 	export let name;
 	$: if(newMessage){
 		if(newType){
 			
 		}
 	}
+	const handleNewMessage =  (e) => {
+		if(e.code === "Enter"){
+			console.log('dingo adding new message');
+			const event = {type: newType, payload: newMessage}
+			insert('events', event);
+			worker.postMessage({type: "db-get", sql: 'select * from messages'})
+			displayedEvents = [...displayedEvents, {type: newType, payload: newMessage}]
+		} 
+	}
 	onMount(() => {
 
 		/**Test dingo code*/
 		displayedEvents = [...events]
-		const worker = new Worker(new URL('../dep/sync.js', import.meta.url));
-		console.log('dingo starting worker')
+		console.log('dingo getting worker');
+		const worker = new Worker(new URL('../lib/sync.js', import.meta.url));
+		console.log('dingo starting worker', worker)
 
 		initBackend(worker);
-		console.log('dingo running UI Invoke')
+		// TODO: Figure out how to get this into initBackend wrapper script
+		setWorker(worker)
+		
+		console.log('dingo running function to invoke UI A', worker)
 		worker.postMessage({ type: 'ui-invoke', name: 'init' });
+
+		console.log('dingo running function to init db B')
+
+		worker.onmessage = function(e){		
+			console.log('dingo worker event', e, e.data.type === "initialized_database");
+			if( e.data.type === "initialized_database"){
+				console.log('dingo initializing database')
+				worker.postMessage({ type: 'db-init', schema: {
+					"events" : {
+						id: "BLOB",
+						cat: "TEXT",
+						msg: "TEXT",
+						coi: "BLOB"
+					},
+					"coi": {
+						id: "BLOB",
+						name: "text",
+						details: "text"
+					},
+					"user_coi": {
+						id: "BLOB",
+						coi: "BLOB",
+						user: "text"
+					}
+				}});
+
+			}
+
+		 }
+
+		 if(e.data.type === )
+
+
 
 		// Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
 		// Sync.addSchema({
@@ -42,11 +90,12 @@
 	
 	})
 </script>
-
+<svelte:options accessors={true} />
+<svelte:window on:keydown={handleNewMessage} />
 <main>
 
 	 <div class="flex">
-		<h1 class="text-blue-500 leading-tight">Santa-Fe TESTdi</h1>
+		<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
 		<div class="ml-auto">
 			<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />
 			<input class="border-b border-blue-500"  bind:value={newMessage} placeholder="Message" />

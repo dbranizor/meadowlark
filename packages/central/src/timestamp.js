@@ -2,7 +2,7 @@ import murmur from "../deps/murmurhash.mjs";
 
 const timestampNumbers = (millis, counter) => !isNaN(millis) && !isNaN(counter);
 const invalidTimestampString = (timestamp) => typeof timestamp !== "string";
-
+let config = { maxDrift: 60000 }
 class Timestamp {
   constructor(millis, counter, node, config = { maxDrift: 60000 }) {
     this._state = {
@@ -24,8 +24,8 @@ class Timestamp {
       ("0000000000000000" + this.node()).slice(-16),
     ].join("-");
   }
-  maxDrift() {
-    return this._state.maxDrift;
+  static maxDrift() {
+    return config.maxDrift;
   }
 
   millis() {
@@ -44,7 +44,7 @@ class Timestamp {
     return murmur.v3(this.toString());
   }
 
-  send(clock) {
+  static send(clock) {
     console.log("dingo clock?", clock);
     // Retrieve the local wall time
     const phys = Date.now();

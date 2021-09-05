@@ -1,13 +1,14 @@
-import initSqlJs from "@jlongster/sql.js";
+import initSqlJs from '@jlongster/sql.js';
 // import { SQLiteFS } from '../..';
-import { SQLiteFS } from "absurd-sql";
+import {SQLiteFS} from "absurd-sql"
+import * as uuid from 'uuid';
+import MemoryBackend from 'absurd-sql/dist/memory-backend';
 // import IndexedDBBackend from '../../indexeddb/backend';
-import IndexedDBBackend from "absurd-sql/dist/indexeddb-backend";
-import { buildSchema, idFromBinaryUUID } from "@meadowlark-labs/central";
+import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend';
 
 // Various global state for the demo
 
-let currentBackendType = "idb";
+let currentBackendType = 'idb';
 let cacheSize = 5000;
 let pageSize = 8192;
 let dbName = `fts.sqlite`;
@@ -19,25 +20,13 @@ let sqlFS;
 
 let SQL = null;
 let ready = null;
-
-const sqlMessages = `CREATE TABLE if not exists messages
-  (timestamp TEXT,
-   group_id TEXT,
-   dataset TEXT,
-   row TEXT,
-   column TEXT,
-   value TEXT,
-   PRIMARY KEY(timestamp, group_id))`;
-
 async function _init() {
-  console.log("dingo setting up db");
-  SQL = await initSqlJs({ locateFile: (file) => file });
+  SQL = await initSqlJs({ locateFile: file => file });
   sqlFS = new SQLiteFS(SQL.FS, idbBackend);
   SQL.register_for_idb(sqlFS);
 
-  SQL.FS.mkdir("/blocked");
-  SQL.FS.mount(sqlFS, {}, "/blocked");
-  self.postMessage({ type: "initialized_database" });
+  SQL.FS.mkdir('/blocked');
+  SQL.FS.mount(sqlFS, {}, '/blocked');
 }
 
 function init() {
@@ -49,7 +38,7 @@ function init() {
 }
 
 function output(msg) {
-  self.postMessage({ type: "output", msg });
+  self.postMessage({ type: 'output', msg });
 }
 
 function getDBName() {
@@ -67,9 +56,8 @@ function closeDatabase() {
 
 async function getDatabase() {
   if (_db == null) {
-    console.log("dingo creating db");
+    console.log('dingo creating db')
     _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
-
     // Should ALWAYS use the journal in memory mode. Doesn't make
     // any sense at all to write the journal
     //
@@ -82,23 +70,18 @@ async function getDatabase() {
       PRAGMA page_size=${pageSize};
       PRAGMA journal_mode=MEMORY;
     `);
-    console.log("dingo created db");
-    _db.exec("VACUUM");
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
+    console.log('dingo created db')
+    _db.exec('VACUUM');
     output(
       `Opened ${getDBName()} (${currentBackendType}) cache size: ${cacheSize}`
     );
-    console.log("dingo ran all the db shit");
-  } else {
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
+    console.log('dingo ran all the db shit')
   }
   return _db;
 }
 
 function formatNumber(num) {
-  return new Intl.NumberFormat("en-US").format(num);
+  return new Intl.NumberFormat('en-US').format(num);
 }
 
 async function fetchJSON(url) {
@@ -110,13 +93,13 @@ async function load() {
   let db = await getDatabase();
 
   let storyIds = await fetchJSON(
-    "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
+    'https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty'
   );
 
   let stories = await Promise.all(
     storyIds
       .slice(0, 10)
-      .map((storyId) =>
+      .map(storyId =>
         fetchJSON(
           `https://hacker-news.firebaseio.com/v0/item/${storyId}.json?print=pretty`
         )
@@ -138,23 +121,23 @@ async function load() {
             id: commentId,
             text: comment.text,
             storyId: story.id,
-            storyTitle: story.title,
+            storyTitle: story.title
           });
         }
       }
     }
   }
 
-  db.exec("BEGIN TRANSACTION");
+  db.exec('BEGIN TRANSACTION');
   let stmt = db.prepare(
-    "INSERT INTO comments (content, url, title) VALUES (?, ?, ?)"
+    'INSERT INTO comments (content, url, title) VALUES (?, ?, ?)'
   );
   for (let result of results) {
     let url = `https://news.ycombinator.com/item?id=${result.id}`;
     stmt.run([result.text, url, result.storyTitle]);
   }
-  db.exec("COMMIT");
-  console.log("done!");
+  db.exec('COMMIT');
+  console.log('done!');
 
   count();
 }
@@ -162,7 +145,7 @@ async function load() {
 async function search(term) {
   let db = await getDatabase();
 
-  if (!term.includes("NEAR") && !term.match(/"\*/)) {
+  if (!term.includes('NEAR') && !term.match(/"\*/)) {
     term = `"*${term}*"`;
   }
 
@@ -178,7 +161,7 @@ async function search(term) {
   }
   stmt.free();
 
-  self.postMessage({ type: "results", results });
+  self.postMessage({ type: 'results', results });
 }
 
 async function count() {
@@ -188,82 +171,31 @@ async function count() {
     CREATE VIRTUAL TABLE IF NOT EXISTS comments USING fts3(content, title, url);
   `);
 
-  let stmt = db.prepare("SELECT COUNT(*) as count FROM comments");
+  let stmt = db.prepare('SELECT COUNT(*) as count FROM comments');
   stmt.step();
   let row = stmt.getAsObject();
-  self.postMessage({ type: "count", count: row.count });
+  self.postMessage({ type: 'count', count: row.count });
 
   stmt.free();
-}
-
-async function run(statement) {
-  let db = await getDatabase();
-  try {
-    console.log("dingo running statement: ", statement);
-    db.exec(statement);
-  } catch (error) {
-    console.error(`error: ${error}`);
-  }
-}
-
-async function get(statement) {
-  let db = await getDatabase();
-  let result;
-
-  try {
-    result = db.get(statement);
-  } catch (error) {
-    console.error(`error: ${error}`);
-  }
-  result = Array.isArray(result)
-    ? result.map((r) => {
-        r.row = idFromBinaryUUID(r.row);
-        r.id = idFromBinaryUUID(r.id);
-      })
-    : Object.assign(result, {
-        id: idFromBinaryUUID(result.id),
-        row: idFromBinaryUUID(result.row),
-      });
-
-  self.postMessage({ type: "results", results: result });
 }
 
 let methods = {
   init,
   load,
   search,
-  count,
+  count
 };
 
-if (typeof self !== "undefined") {
-  self.onmessage = (msg) => {
+if (typeof self !== 'undefined') {
+  self.onmessage = msg => {
     switch (msg.data.type) {
-      case "search":
+      case 'search':
         search(msg.data.name);
         break;
-      case "db-run":
-        run(msg.data.sql);
-        break;
-      case "db-get":
-        get(msg.data.sql);
-        break;
-      case "db-init":
-        console.log("dingo building schema");
-        const statement = buildSchema(msg.data.schema);
-        console.log("dingo built schema", statement);
-        Object.keys(statement).forEach((key) => {
-          console.log(`Initing Table: ${key}`);
-          run(statement[key]);
-        });
-        console.log("dingo built tables");
 
-        run(sqlMessages);
-        console.log("dingo ran sqlMessages", sqlMessages);
-
-        break;
-      case "ui-invoke":
+      case 'ui-invoke':
         if (methods[msg.data.name] == null) {
-          throw new Error("Unknown method: " + msg.data.name);
+          throw new Error('Unknown method: ' + msg.data.name);
         }
         methods[msg.data.name]();
         break;
@@ -273,7 +205,7 @@ if (typeof self !== "undefined") {
   for (let method of Object.keys(methods)) {
     let btn = document.querySelector(`#${method}`);
     if (btn) {
-      btn.addEventListener("click", methods[method]);
+      btn.addEventListener('click', methods[method]);
     }
   }
   init();

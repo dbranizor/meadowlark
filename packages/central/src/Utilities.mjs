@@ -28,7 +28,7 @@ const v4 = () => {
     .slice(-16);
 };
 
-const makeClientId = () => {
+const makeClientId = (wDashes = false) => {
   return v4().replace(/-/g, "").slice(-16);
 };
 

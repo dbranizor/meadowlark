@@ -6,7 +6,7 @@ export default [
     external: [],
     output: {
       file: "lib/central.js",
-      format: "ejs",
+      format: "es",
     },
     plugins: [resolve()],
   },
