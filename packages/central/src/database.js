@@ -4,8 +4,26 @@ import { Timestamp } from "./timestamp";
 let _worker;
 const setWorker = (worker) => {
   _worker = worker;
-}
+};
 const getWorker = () => _worker;
+
+/**
+ *
+ * ApplyMessages = CompareMessages -> getGexsting -> Update Existing
+ */
+
+const compareMessages = (messages) => {
+  let existingMessages = new Map();
+};
+
+const apply = (messages) => {
+  _worker.postMessage({ type: "db-compare-messages", messages });
+  _worker.onmessage = function (e) {
+    if (e.data.type === "existing-messages") {
+      console.log("dingo existing messages", e.data);
+    }
+  };
+};
 
 const buildSchema = (data) => {
   return Object.keys(data).reduce((acc, curr) => {
@@ -30,26 +48,6 @@ const buildSchema = (data) => {
   }, {});
 };
 
-const idFromBinaryUUID = (buf) => {
-  return [
-    buf.toString("hex", 4, 8),
-    buf.toString("hex", 2, 4),
-    buf.toString("hex", 0, 2),
-    buf.toString("hex", 8, 10),
-    buf.toString("hex", 10, 16),
-  ];
-};
-
-const idToBinaryUuid = (id) => {
-  const buf = Buffer.from(id, "hex");
-  return Buffer.concat([
-    buf.slice(6, 8),
-    buf.slice(4, 6),
-    buf.slice(0, 4),
-    buf.slice(8, 16),
-  ]);
-};
-
 const insert = (table, row) => {
   let id = makeClientId(true);
   let fields = Object.keys(row);
@@ -62,19 +60,14 @@ const insert = (table, row) => {
       timestamp: Timestamp.send(getClock()).toString(),
     };
   });
-  const worker = getWorker();
+  // const worker = getWorker();
 
-  console.log("dingo object", messages);
-  messages.forEach((m) => {
-    const id = idToBinaryUuid(makeClientId());
-    const row = DatabaseUtilities.idToBinaryUUID(m.row);
-    const sql = `INSERT INTO messages (id, dataaset, row, column, value, timestamp) VALUES (X'${id.toString(
-      "hex"
-    )}', ${m.dataset}, X'${row.toString("hex")}', ${m.column}, ${m.value}, ${m.timestamp})`;
-    worker.postMessage({type: 'db-run', sql})
-  });
+  apply(messages);
+  // console.log("dingo object", messages);
+  // messages.forEach((m) => {
+  // const sql = `INSERT INTO messages (dataset, row, column, value, timestamp) VALUES ('${m.dataset}', '${m.row}', '${m.column}', '${m.value}', '${m.timestamp}')`;
+  // worker.postMessage({ type: "db-run", sql });
+  // });
 };
 
-
-
-export { buildSchema, insert, setWorker };
+export { buildSchema, insert, setWorker, apply };

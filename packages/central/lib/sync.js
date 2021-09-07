@@ -200,32 +200,35 @@ async function run(statement) {
   let db = await getDatabase();
   try {
     console.log("dingo running statement: ", statement);
-    db.exec(statement);
+    db.run(statement);
   } catch (error) {
     console.error(`error: ${error}`);
   }
 }
+
+const rowMapper = (result) => {
+  return result[0].values.map((c, i) => {
+    const obj = Object.keys(c).reduce((acc, curr, i) => {
+      acc[result[0].columns[i]] = c[curr];
+      return acc;
+    }, {});
+    return obj;
+  });
+};
 
 async function get(statement) {
   let db = await getDatabase();
   let result;
 
   try {
-    result = db.get(statement);
+    result = db.exec(statement);
   } catch (error) {
     console.error(`error: ${error}`);
   }
-  result = Array.isArray(result)
-    ? result.map((r) => {
-        r.row = idFromBinaryUUID(r.row);
-        r.id = idFromBinaryUUID(r.id);
-      })
-    : Object.assign(result, {
-        id: idFromBinaryUUID(result.id),
-        row: idFromBinaryUUID(result.row),
-      });
 
-  self.postMessage({ type: "results", results: result });
+  const resturnData = rowMapper(result);
+
+  self.postMessage({ type: "results", results: resturnData });
 }
 
 let methods = {
@@ -243,6 +246,9 @@ if (typeof self !== "undefined") {
         break;
       case "db-run":
         run(msg.data.sql);
+        break;
+      case "db-get-messages":
+        get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC")
         break;
       case "db-get":
         get(msg.data.sql);

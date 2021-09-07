@@ -16,6 +16,7 @@
 	let displayedEvents = [];
 	let newType = "";;
 	let newMessage = "";
+	let worker;
 	export let name;
 	$: if(newMessage){
 		if(newType){
@@ -27,7 +28,7 @@
 			console.log('dingo adding new message');
 			const event = {type: newType, payload: newMessage}
 			insert('events', event);
-			worker.postMessage({type: "db-get", sql: 'select * from messages'})
+			worker.postMessage({type: "db-get-messages"})
 			displayedEvents = [...displayedEvents, {type: newType, payload: newMessage}]
 		} 
 	}
@@ -36,7 +37,7 @@
 		/**Test dingo code*/
 		displayedEvents = [...events]
 		console.log('dingo getting worker');
-		const worker = new Worker(new URL('../lib/sync.js', import.meta.url));
+		worker = new Worker(new URL('../lib/sync.js', import.meta.url));
 		console.log('dingo starting worker', worker)
 
 		initBackend(worker);
@@ -45,37 +46,42 @@
 		
 		console.log('dingo running function to invoke UI A', worker)
 		worker.postMessage({ type: 'ui-invoke', name: 'init' });
-
+		
 		console.log('dingo running function to init db B')
 
 		worker.onmessage = function(e){		
 			console.log('dingo worker event', e, e.data.type === "initialized_database");
 			if( e.data.type === "initialized_database"){
 				console.log('dingo initializing database')
+				worker.postMessage({type: "db-run", sql: "select * from messages"})
 				worker.postMessage({ type: 'db-init', schema: {
 					"events" : {
-						id: "BLOB",
+						id: "TEXT",
 						cat: "TEXT",
 						msg: "TEXT",
-						coi: "BLOB"
+						coi: "TEXT"
 					},
 					"coi": {
-						id: "BLOB",
+						id: "TEXT",
 						name: "text",
 						details: "text"
 					},
 					"user_coi": {
-						id: "BLOB",
-						coi: "BLOB",
+						id: "TEXT",
+						coi: "TEXT",
 						user: "text"
 					}
 				}});
 
 			}
 
-		 }
 
-		 if(e.data.type === )
+			if(e.data.type === "results"){
+			 console.log('dingo results', e.data)
+		 	}
+
+
+		 }
 
 
 
