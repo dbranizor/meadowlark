@@ -60,7 +60,6 @@ const insert = (table, row) => {
       timestamp: Timestamp.send(getClock()).toString(),
     };
   });
-  // const worker = getWorker();
 
   apply(messages);
   // console.log("dingo object", messages);

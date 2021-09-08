@@ -207,13 +207,13 @@ async function run(statement) {
 }
 
 const rowMapper = (result) => {
-  return result[0].values.map((c, i) => {
+  return result && result.length ? result[0].values.map((c, i) => {
     const obj = Object.keys(c).reduce((acc, curr, i) => {
       acc[result[0].columns[i]] = c[curr];
       return acc;
     }, {});
     return obj;
-  });
+  }) : [];
 };
 
 async function get(statement) {
@@ -229,6 +229,37 @@ async function get(statement) {
   const resturnData = rowMapper(result);
 
   self.postMessage({ type: "results", results: resturnData });
+}
+
+async function handleCompare(messages) {
+  const db = await getDatabase();
+
+  let results;
+
+  const datasets = buildINClause(messages.map((m) => m.dataset));
+  const rows = buildINClause(messages.map((m) => m.row));
+  const columns = buildINClause(messages.map((m) => m.column));
+
+  const SQL = `SELECT * FROM messages where dataset IN(${datasets}) AND ROW IN(${rows}) AND COLUMN IN(${columns})`;
+
+  try {
+    results = db.exec(SQL);
+  } catch (error) {
+    throw new Error(`ERROR: ${error}`);
+  }
+  results = rowMapper(results);
+  self.postMessage({ type: "existing-messages", results });
+  function buildINClause(data = []) {
+    return data
+      .map((d) => `'${d}'`)
+      .reduce((acc, curr) => {
+        if (acc.some((a) => a === curr)) {
+          return acc;
+        }
+        return [...acc, curr];
+      }, [])
+      .join(",");
+  }
 }
 
 let methods = {
@@ -247,8 +278,11 @@ if (typeof self !== "undefined") {
       case "db-run":
         run(msg.data.sql);
         break;
+      case "db-compare-messages":
+        handleCompare(msg.data.messages);
+        break;
       case "db-get-messages":
-        get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC")
+        get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC");
         break;
       case "db-get":
         get(msg.data.sql);
