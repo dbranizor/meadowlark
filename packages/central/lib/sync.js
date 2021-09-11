@@ -207,28 +207,32 @@ async function run(statement) {
 }
 
 const rowMapper = (result) => {
-  return result && result.length ? result[0].values.map((c, i) => {
-    const obj = Object.keys(c).reduce((acc, curr, i) => {
-      acc[result[0].columns[i]] = c[curr];
-      return acc;
-    }, {});
-    return obj;
-  }) : [];
+  return result && result.length
+    ? result[0].values.map((c, i) => {
+        const obj = Object.keys(c).reduce((acc, curr, i) => {
+          acc[result[0].columns[i]] = c[curr];
+          return acc;
+        }, {});
+        return obj;
+      })
+    : [];
 };
 
-async function get(statement) {
+async function get(statement, post = true) {
   let db = await getDatabase();
   let result;
-
+  console.log("dingo running SQL GET DAO: ", statement);
   try {
     result = db.exec(statement);
   } catch (error) {
     console.error(`error: ${error}`);
   }
+  console.log("dingo SQL GET DAO get results: ", result);
 
   const resturnData = rowMapper(result);
 
-  self.postMessage({ type: "results", results: resturnData });
+  post ? self.postMessage({ type: "results", results: resturnData }) : post;
+  return resturnData;
 }
 
 async function handleCompare(messages) {
@@ -262,6 +266,26 @@ async function handleCompare(messages) {
   }
 }
 
+async function handleApplies(messages = []) {
+  const db = await getDatabase();
+
+  await Promise.all(messages.map(processMessages));
+  console.log("Applied Message");
+  return true;
+  async function processMessages(m) {
+    const sql = `SELECT * from ${m.dataset} where  id = '${m.row}';`;
+    console.log("dingo sql", sql);
+    const row = await get(sql);
+    console.log("dingo row", row);
+    if (!row) {
+      //TODO : Process non-strings
+      const sql = `INSERT INTO ${m.dataset}(id, ${m.column}) VALUES ('${m.row}', '${m.value}');`;
+      console.log("dingo insert sql", sql);
+      await run(sql, false);
+    }
+  }
+}
+
 let methods = {
   init,
   load,
@@ -270,13 +294,25 @@ let methods = {
 };
 
 if (typeof self !== "undefined") {
-  self.onmessage = (msg) => {
+  self.onmessage = async (msg) => {
     switch (msg.data.type) {
       case "search":
         search(msg.data.name);
         break;
       case "db-run":
         run(msg.data.sql);
+        break;
+      case "db-apply":
+        try {
+          await handleApplies(msg.data.messages);
+        } catch (error) {
+          throw new Error(`Error :`, error);
+        }
+        const results = await get(
+          `SELECT * FROM ${msg.data.messages[0].dataset};`
+        );
+        console.log("dingo gotz results", results);
+        self.postMessage({ type: "applied-messages", results });
         break;
       case "db-compare-messages":
         handleCompare(msg.data.messages);

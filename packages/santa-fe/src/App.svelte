@@ -7,11 +7,11 @@
 
 	start()
 	let events = [{
-		type: "test",
-		payload: "This is just a test"
+		cat: "test",
+		msg: "This is just a test"
 	}, {
-		type: "email",
-		payload: "Check your emails"
+		cat: "email",
+		msg: "Check your emails"
 	}]
 	let displayedEvents = [];
 	let newType = "";;
@@ -26,10 +26,10 @@
 	const handleNewMessage =  (e) => {
 		if(e.code === "Enter"){
 			console.log('dingo adding new message');
-			const event = {type: newType, payload: newMessage}
+			const event = {cat: newType, msg: newMessage}
 			insert('events', event);
 			worker.postMessage({type: "db-get-messages"})
-			displayedEvents = [...displayedEvents, {type: newType, payload: newMessage}]
+			displayedEvents = [...displayedEvents, {cat: newType, msg: newMessage}]
 		} 
 	}
 	onMount(() => {
@@ -76,7 +76,7 @@
 			}
 
 
-			if(e.data.type === "results"){
+			if(e.data.type === "applied-messages"){
 			 console.log('dingo results', e.data)
 		 	}
 

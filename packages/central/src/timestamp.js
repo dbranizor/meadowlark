@@ -1,4 +1,4 @@
-import murmur from "../deps/murmurhash.mjs";
+import hash from "../deps/murmurhash.mjs";
 
 const timestampNumbers = (millis, counter) => !isNaN(millis) && !isNaN(counter);
 const invalidTimestampString = (timestamp) => typeof timestamp !== "string";
@@ -41,7 +41,7 @@ class Timestamp {
   }
 
   hash() {
-    return murmur.v3(this.toString());
+    return hash(this.toString());
   }
 
   static send(clock) {

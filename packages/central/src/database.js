@@ -1,26 +1,51 @@
 import { makeClientId } from "./Utilities.mjs";
 import { getClock } from "./clock";
 import { Timestamp } from "./timestamp";
+import * as merkle from "./merkle";
+import Environment from "./environment-state";
+
 let _worker;
+let environment = {};
+
+let unsubscribes = [];
+
+unsubscribes.push(Environment.subscribe((e) => (environment = e)));
 const setWorker = (worker) => {
   _worker = worker;
 };
 const getWorker = () => _worker;
 
-/**
- *
- * ApplyMessages = CompareMessages -> getGexsting -> Update Existing
- */
-
-const compareMessages = (messages) => {
-  let existingMessages = new Map();
-};
-
-const apply = (messages) => {
+const apply = (messages = []) => {
+  let clock = getClock();
   _worker.postMessage({ type: "db-compare-messages", messages });
   _worker.onmessage = function (e) {
+    const applies = [];
     if (e.data.type === "existing-messages") {
+      const existingMessages = e.data.result || [];
+      messages.forEach((msg) => {
+        const existingMessage = existingMessages.find(
+          (e) =>
+            e.dataset === msg.dataset &&
+            e.row === msg.row &&
+            e.column === msg.column
+        );
+        if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
+          applies.push(msg);
+        }
+
+        if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
+          clock.merkle = merkle.insert(
+            clock.merkle,
+            Timestamp.parse(msg.timestamp)
+          );
+        }
+      });
+      _worker.postMessage({ type: "db-apply", messages: applies });
       console.log("dingo existing messages", e.data);
+    }
+    if (e.data.type === "applied-messages") {
+      // sync messages
+      console.log('dingo should apply sync here', e.data, environment);
     }
   };
 };
