@@ -277,7 +277,7 @@ async function handleApplies(messages = []) {
     console.log("dingo sql", sql);
     const row = await get(sql);
     console.log("dingo row", row);
-    if (!row) {
+    if (!row || !row.length) {
       //TODO : Process non-strings
       const sql = `INSERT INTO ${m.dataset}(id, ${m.column}) VALUES ('${m.row}', '${m.value}');`;
       console.log("dingo insert sql", sql);

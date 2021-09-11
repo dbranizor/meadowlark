@@ -3,26 +3,30 @@ import { getClock } from "./clock";
 import { Timestamp } from "./timestamp";
 import * as merkle from "./merkle";
 import Environment from "./environment-state";
+import MessageState from "./messages-state";
 
 let _worker;
 let environment = {};
-
+let messages = [];
 let unsubscribes = [];
 
-unsubscribes.push(Environment.subscribe((e) => (environment = e)));
+unsubscribes.push(
+  Environment.subscribe((e) => (environment = e)),
+  MessageState.subscribe((m) => (messages = m))
+);
 const setWorker = (worker) => {
   _worker = worker;
 };
 const getWorker = () => _worker;
 
-const apply = (messages = []) => {
+const apply = (locMessages = []) => {
   let clock = getClock();
-  _worker.postMessage({ type: "db-compare-messages", messages });
+  _worker.postMessage({ type: "db-compare-messages", messages: locMessages });
   _worker.onmessage = function (e) {
     const applies = [];
     if (e.data.type === "existing-messages") {
       const existingMessages = e.data.result || [];
-      messages.forEach((msg) => {
+      locMessages.forEach((msg) => {
         const existingMessage = existingMessages.find(
           (e) =>
             e.dataset === msg.dataset &&
@@ -38,6 +42,7 @@ const apply = (messages = []) => {
             clock.merkle,
             Timestamp.parse(msg.timestamp)
           );
+          MessageState.add(msg);
         }
       });
       _worker.postMessage({ type: "db-apply", messages: applies });
@@ -45,10 +50,72 @@ const apply = (messages = []) => {
     }
     if (e.data.type === "applied-messages") {
       // sync messages
-      console.log('dingo should apply sync here', e.data, environment);
+      console.log("dingo should apply sync here", e.data, environment);
+      sync(locMessages)
     }
   };
 };
+
+async function post(data) {
+  let res = await fetch(`http://${environment.syncUrl}/sync`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+  res = await res.json();
+
+  if (res.status !== 'ok') {
+    throw new Error('API error: ' + res.reason);
+  }
+  return res.data;
+}
+
+
+async function sync(initialMessages = [], since = null) {
+  if (!_syncEnabled) {
+    return;
+  }
+
+  let syncMessages = initialMessages;
+
+  if (since) {
+    let timestamp = new Timestamp(since, 0, '0').toString();
+    syncMessages = messages.filter(msg => msg.timestamp >= timestamp);
+  }
+
+  let result;
+  try {
+    result = await post({
+      group_id: environment.group_id,
+      client_id: getClock().timestamp.node(),
+      messages: syncMessages,
+      merkle: getClock().merkle
+    });
+  } catch (e) {
+    throw new Error('network-failure');
+  }
+
+  if (result.messages.length > 0) {
+    receiveMessages(result.messages);
+  }
+
+  let diffTime = merkle.diff(result.merkle, getClock().merkle);
+
+  if (diffTime) {
+    if (since && since === diffTime) {
+      throw new Error(
+        'A bug happened while syncing and the client ' +
+          'was unable to get in sync with the server. ' +
+          "This is an internal error that shouldn't happen"
+      );
+    }
+
+    console.log('dingo returning')
+    return sync([], diffTime);
+  }
+}
 
 const buildSchema = (data) => {
   return Object.keys(data).reduce((acc, curr) => {
