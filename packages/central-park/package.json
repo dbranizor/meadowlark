@@ -3,9 +3,10 @@
   "version": "0.0.3",
   "description": "> TODO: description",
   "author": "dbranizor <dbranizor@gmail.com>",
+  "type": "module",
   "homepage": "https://github.com/dbranizor/meadowlark#readme",
   "license": "ISC",
-  "main": "lib/central-park.js",
+  "main": "lib/central-park.mjs",
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -18,7 +19,7 @@
     "url": "git+https://github.com/dbranizor/meadowlark.git"
   },
   "scripts": {
-    "start": "node ./lib/central-park.js",
+    "start": "node --experimental-modules ./lib/central-park.mjs",
     "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "bugs": {

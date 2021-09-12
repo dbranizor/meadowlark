@@ -51,38 +51,41 @@ const apply = (locMessages = []) => {
     if (e.data.type === "applied-messages") {
       // sync messages
       console.log("dingo should apply sync here", e.data, environment);
-      sync(locMessages)
+      sync(locMessages);
     }
   };
 };
 
 async function post(data) {
-  let res = await fetch(`http://${environment.syncUrl}/sync`, {
-    method: 'POST',
+  let res = await fetch(`${environment.syncUrl}`, {
+    method: "POST",
+    mode: "cors",
+    credentials: "same-origin",
+    redirect: "follow", 
+    referrerPolicy: "no-referrer",
     body: JSON.stringify(data),
     headers: {
-      'Content-Type': 'application/json'
-    }
+      "Content-Type": "application/json",
+    },
   });
   res = await res.json();
 
-  if (res.status !== 'ok') {
-    throw new Error('API error: ' + res.reason);
+  if (res.status !== "ok") {
+    throw new Error("API error: " + res.reason);
   }
   return res.data;
 }
 
-
 async function sync(initialMessages = [], since = null) {
-  if (!_syncEnabled) {
+  if (!environment.syncEnabled) {
     return;
   }
 
   let syncMessages = initialMessages;
 
   if (since) {
-    let timestamp = new Timestamp(since, 0, '0').toString();
-    syncMessages = messages.filter(msg => msg.timestamp >= timestamp);
+    let timestamp = new Timestamp(since, 0, "0").toString();
+    syncMessages = messages.filter((msg) => msg.timestamp >= timestamp);
   }
 
   let result;
@@ -91,10 +94,10 @@ async function sync(initialMessages = [], since = null) {
       group_id: environment.group_id,
       client_id: getClock().timestamp.node(),
       messages: syncMessages,
-      merkle: getClock().merkle
+      merkle: getClock().merkle,
     });
   } catch (e) {
-    throw new Error('network-failure');
+    throw new Error("network-failure");
   }
 
   if (result.messages.length > 0) {
@@ -106,13 +109,13 @@ async function sync(initialMessages = [], since = null) {
   if (diffTime) {
     if (since && since === diffTime) {
       throw new Error(
-        'A bug happened while syncing and the client ' +
-          'was unable to get in sync with the server. ' +
+        "A bug happened while syncing and the client " +
+          "was unable to get in sync with the server. " +
           "This is an internal error that shouldn't happen"
       );
     }
 
-    console.log('dingo returning')
+    console.log("dingo returning");
     return sync([], diffTime);
   }
 }

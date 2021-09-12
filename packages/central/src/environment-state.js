@@ -1,6 +1,11 @@
 import { writable } from "./store";
 export const InitEnvironmentState = () => {
-  const { set, subscribe, update } = writable({ debug: true, syncUrl: 'localhost', group_id: "meadowlark" });
+  const { set, subscribe, update } = writable({
+    debug: true,
+    syncUrl: "https://localhost/central-park",
+    syncEnabled: true,
+    group_id: "meadowlark",
+  });
   const methods = {
     update(prop) {
       Object.keys(prop).forEach((key) =>

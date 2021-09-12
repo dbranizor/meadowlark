@@ -5,6 +5,7 @@
   "author": "dbranizor <dbranizor@gmail.com>",
   "homepage": "",
   "license": "ISC",
+  "type": "module",
   "main": "lib/central.js",
   "directories": {
     "lib": "lib",
