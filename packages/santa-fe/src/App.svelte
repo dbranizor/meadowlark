@@ -2,7 +2,7 @@
 	import Toasters from "./Toasters.svelte"
 	import {onMount} from "svelte"
 	import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
-	import {insert, start, setWorker} from "@meadowlark-labs/central"
+	import {insert, start, setWorker, setEnvironment} from "@meadowlark-labs/central"
 
 
 	start()
@@ -17,6 +17,21 @@
 	let newType = "";;
 	let newMessage = "";
 	let worker;
+
+
+	
+
+	let testUsers = [
+		{id: "John", display: "John"},
+		{id: "George", display: "George"},
+		{id: "Paul", display: "Paul"},
+		{id: "Ringo", display: "Ringo"},
+	]
+
+	let selectedUser = testUsers[1].display;
+	let centralConfig = {user_id: selectedUser, syncEnabled: true, syncUrl: "https://localhost/central-park", group_id: "meadowlark", debug: true}
+	setEnvironment(centralConfig)
+
 	export let name;
 	$: if(newMessage){
 		if(newType){
@@ -33,7 +48,7 @@
 		} 
 	}
 	onMount(() => {
-
+		
 		/**Test dingo code*/
 		displayedEvents = [...events]
 		console.log('dingo getting worker');
@@ -101,6 +116,11 @@
 <main>
 
 	 <div class="flex">
+		<select bind:value={selectedUser} on:change={() => setEnvironment(centralConfig)}>
+			{#each testUsers as user}
+				 <option value={user}>{user.display}</option>
+			{/each}
+		</select>
 		<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
 		<div class="ml-auto">
 			<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />

@@ -4,6 +4,7 @@ export const InitEnvironmentState = () => {
     debug: true,
     syncUrl: "https://localhost/central-park",
     syncEnabled: true,
+    user_id: false,
     group_id: "meadowlark",
   });
   const methods = {

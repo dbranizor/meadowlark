@@ -57,15 +57,17 @@ const apply = (locMessages = []) => {
 };
 
 async function post(data) {
-  let res = await fetch(`${environment.syncUrl}`, {
+  console.log("diongo running fetch", environment, environment.user_id);
+  let res = await fetch(`${environment.syncUrl}/sync`, {
     method: "POST",
     mode: "cors",
     credentials: "same-origin",
-    redirect: "follow", 
+    redirect: "follow",
     referrerPolicy: "no-referrer",
     body: JSON.stringify(data),
     headers: {
       "Content-Type": "application/json",
+      authorization: environment.user_id,
     },
   });
   res = await res.json();
@@ -77,6 +79,7 @@ async function post(data) {
 }
 
 async function sync(initialMessages = [], since = null) {
+  console.log("dingo running sync", environment);
   if (!environment.syncEnabled) {
     return;
   }
