@@ -167,4 +167,4 @@ const insert = (table, row) => {
   // });
 };
 
-export { buildSchema, insert, setWorker, apply };
+export { sync, buildSchema, insert, setWorker, apply };

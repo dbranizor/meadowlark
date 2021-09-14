@@ -5,7 +5,7 @@
   "scripts": {
     "build:tailwind": "postcss css/tailwind.css -o public/tailwind-out.css",
     "build": "webpack",
-    "prebuild": "npm run build:tailwind && cp node_modules/@meadowlark-labs/central/lib/sync.js ./lib && cp  node_modules/@meadowlark-labs/central/lib/sql-wasm.wasm ./lib",
+    "prebuild": "cp node_modules/@meadowlark-labs/central/lib/sync.js ./lib && cp  node_modules/@meadowlark-labs/central/lib/sql-wasm.wasm ./lib",
     "dev": "http-server public -p 8010",
     "start": "sirv public --no-clear"
   },

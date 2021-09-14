@@ -134,9 +134,9 @@
 				<Toasters type="info" display={true} id={event.type} 
 				on:CLEAR_TOASTER={() => displayedEvents = displayedEvents.filter(d => d.type !== event.type)} >
 					<span slot="header">
-						{event.type}
+						{event.cat}
 					</span>
-					<span slot="body">{event.payload}</span>
+					<span slot="body">{event.msg}</span>
 				</Toasters>
 			</li>
 
