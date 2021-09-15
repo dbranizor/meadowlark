@@ -1,4 +1,4 @@
-import { writable } from "./store";
+import { writable } from "./store.js";
 export const InitEnvironmentState = () => {
   const { set, subscribe, update } = writable({
     debug: true,
@@ -6,6 +6,7 @@ export const InitEnvironmentState = () => {
     syncEnabled: true,
     user_id: false,
     group_id: "meadowlark",
+    isOffline: false
   });
   const methods = {
     update(prop) {

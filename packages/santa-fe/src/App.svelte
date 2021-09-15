@@ -2,7 +2,10 @@
 	import Toasters from "./Toasters.svelte"
 	import {onMount} from "svelte"
 	import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
-	import {insert, start, setWorker, setEnvironment} from "@meadowlark-labs/central"
+	import {insert, start, setWorker, setEnvironment,runInterval } from "@meadowlark-labs/central"
+import Navbar from "./Navbar.svelte";
+import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
+
 
 
 	start()
@@ -17,9 +20,10 @@
 	let newType = "";;
 	let newMessage = "";
 	let worker;
+	let interval;
 
+	const unsubscribes = [];
 
-	
 
 	let testUsers = [
 		{id: "John", display: "John"},
@@ -29,10 +33,12 @@
 	]
 
 	let selectedUser = testUsers[1].display;
-	let centralConfig = {user_id: selectedUser, syncEnabled: true, syncUrl: "https://localhost/central-park", group_id: "meadowlark", debug: true}
+	let centralConfig = {user_id: selectedUser, syncEnabled: true, syncUrl: "https://localhost/central-park", group_id: "meadowlark", debug: true, isOffline: false}
+	EnvironmentState.subscribe(e => centralConfig = Object.assign(centralConfig, e));
 	setEnvironment(centralConfig)
-
+	
 	export let name;
+
 	$: if(newMessage){
 		if(newType){
 			
@@ -48,7 +54,7 @@
 		} 
 	}
 	onMount(() => {
-		
+		interval = runInterval();
 		/**Test dingo code*/
 		displayedEvents = [...events]
 		console.log('dingo getting worker');
@@ -114,37 +120,50 @@
 <svelte:options accessors={true} />
 <svelte:window on:keydown={handleNewMessage} />
 <main>
-
-	 <div class="flex">
-		<select bind:value={selectedUser} on:change={() => setEnvironment(centralConfig)}>
-			{#each testUsers as user}
-				 <option value={user}>{user.display}</option>
+	<div class="Dark">
+		<Navbar>
+			<span slot="name">
+				Santa-Fe 
+			</span>
+			<span slot="links">
+				<span class="h-5 {centralConfig.isOffline ? 'bg-red-500 hover:bg-red-800 text-gray-100 hover:text-gray-200 ' : ' bg-background-ternary hover:bg-gray-600 text-gray-100 hover:text-gray-200 '}px-2 py-2 flex items-center font-bold">
+					{centralConfig.isOffline ? 'Offline' : 'Online'}
+				</span>
+			</span>
+	
+		</Navbar>
+		 <div class="flex">
+			<select bind:value={selectedUser} on:change={() => setEnvironment(centralConfig)}>
+				{#each testUsers as user}
+					 <option value={user}>{user.display}</option>
+				{/each}
+			</select>
+			<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
+			<div class="ml-auto">
+				<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />
+				<input class="border-b border-blue-500"  bind:value={newMessage} placeholder="Message" />
+			</div>
+		 </div>
+		 <div class="flex justify-end h-full w-full mr-2 mt-2">
+			<ul>
+				{#each displayedEvents as event}
+				<li>
+					<Toasters type="info" display={true} id={event.type} 
+					on:CLEAR_TOASTER={() => displayedEvents = displayedEvents.filter(d => d.type !== event.type)} >
+						<span slot="header">
+							{event.cat}
+						</span>
+						<span slot="body">{event.msg}</span>
+					</Toasters>
+				</li>
+	
 			{/each}
-		</select>
-		<h1 class="text-blue-500 leading-tight">Santa-Fe</h1>
-		<div class="ml-auto">
-			<input class="border-b border-blue-500" bind:value={newType} placeholder="Type" />
-			<input class="border-b border-blue-500"  bind:value={newMessage} placeholder="Message" />
+			</ul>
+	
+	
 		</div>
-	 </div>
-	 <div class="flex justify-end h-full w-full mr-2 mt-2">
-		<ul>
-			{#each displayedEvents as event}
-			<li>
-				<Toasters type="info" display={true} id={event.type} 
-				on:CLEAR_TOASTER={() => displayedEvents = displayedEvents.filter(d => d.type !== event.type)} >
-					<span slot="header">
-						{event.cat}
-					</span>
-					<span slot="body">{event.msg}</span>
-				</Toasters>
-			</li>
-
-		{/each}
-		</ul>
-
-
 	</div>
+
 	
 
 </main>

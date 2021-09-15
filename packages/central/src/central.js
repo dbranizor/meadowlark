@@ -15,7 +15,7 @@ function runInterval() {
     try {
       await sync();
       Environment.update((env) => Object.assign(env, { isOffline: false }));
-    } catch (error) {
+    } catch (e) {
       if (e.message === "network-failure") {
         Environment.update((env) => Object.assign(env, { isOffline: true }));
       } else {

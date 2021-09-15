@@ -77,7 +77,12 @@ async function post(data) {
   }
   return res.data;
 }
-
+function receiveMessages(messages = []){
+  messages.forEach(msg => {
+    Timestamp.receive(getClock(), Timestamp.parse(msg.timestamp))
+  })
+  apply(messages)
+}
 async function sync(initialMessages = [], since = null) {
   console.log("dingo running sync", environment);
   if (!environment.syncEnabled) {

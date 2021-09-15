@@ -1,22 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset='utf-8'>
-	<meta name='viewport' content='width=device-width,initial-scale=1'>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-	<title>Svelte app</title>
-	
-	<link rel='icon' type='image/png' href='/santa-fe/favicon.png'>
-	<link rel='stylesheet' href='/santa-fe/tailwind-out.css'> 
-	<link rel='stylesheet' href='/santa-fe/dist/bundle.css'>
-	<script defer src="/santa-fe/sql-wasm.js"></script>
-	
-	 <script defer src='/santa-fe/dist/bundle.js'></script>
+    <title>Svelte app</title>
 
-	
+    <link rel="icon" type="image/png" href="/santa-fe/favicon.png" />
+    <link rel="stylesheet" href="/santa-fe/tailwind-out.css" />
+    <link rel="stylesheet" href="/santa-fe/dist/bundle.css" />
+    <script defer src="/santa-fe/sql-wasm.js"></script>
 
-</head>
+    <script defer src="/santa-fe/dist/bundle.js"></script>
+  </head>
 
-<body>
-</body>
+  <body></body>
+  <style>
+    .Dark {
+      --bg-primary: #374151;
+      --bg-secondary: #1f2937;
+      --bg-ternary: #111827;
+      --bg-button-primary: #1d4ed8;
+      --bg-button-secondary: #10b981;
+      --bg-button-ternary: #ef4444;
+      --text-tprimary: #e5e7eb;
+      --text-tsecondary: #d1d5db;
+    }
+
+    .Light {
+      --bg-primary: #f3f4f6;
+      --bg-secondary: #d1d5db;
+      --bg-ternary: #9ca3af;
+      --bg-button-primary: #1d4ed8;
+      --bg-button-secondary: #10b981;
+      --bg-button-ternary: #ef4444;
+      --text-tprimary: #111827;
+      --text-tsecondary: #374151;
+      --text-tternary: #e5e7eb;
+    }
+
+    .Gray {
+      --bg-primary: #171717;
+      --bg-secondary: #404040;
+      --bg-ternary: #737373;
+      --bg-button-primary: #1d4ed8;
+      --bg-button-secondary: #10b981;
+      --bg-button-ternary: #ef4444;
+      --text-tprimary: #fff;
+      --text-tsecondary: #e5e7eb;
+      --text-tternary: #d1d5db;
+    }
+
+    .Compact {
+      --padding-sm: 4px;
+      --padding-md: 8px;
+      --padding-lg: 16px;
+      --font-tiny: 0.75rem;
+      --font-base: 0.875rem;
+      --font-lg: 1rem;
+      --height-sm: 8px;
+      --height-md: 12px;
+      --height-lg: 20px;
+      --font-check: 18px;
+      --line-height-check: 20px;
+    }
+
+    .Cozy {
+      --padding-sm: 6px;
+      --padding-md: 12px;
+      --padding-lg: 18px;
+      --font-tiny: 0.875rem;
+      --font-base: 1rem;
+      --font-lg: 1.125rem;
+      --height-sm: 8px;
+      --height-md: 16px;
+      --height-lg: 24px;
+      --font-check: 20px;
+      --line-height-check: 22px;
+    }
+
+    .Comfortable {
+      --padding-sm: 8px;
+      --padding-md: 16px;
+      --padding-lg: 24px;
+      --font-tiny: 1rem;
+      --font-base: 1.125rem;
+      --font-lg: 1.25rem;
+      --height-sm: 10px;
+      --height-md: 20px;
+      --height-lg: 30px;
+      --font-check: 22px;
+      --line-height-check: 30px;
+    }
+
+    .rstorm-toolbar-btn {
+      box-sizing: border-box;
+      height: 32px;
+      width: 70px;
+      border-radius: 14%;
+      padding: 0;
+      vertical-align: middle;
+      z-index: 0;
+      text-overflow: ellipsis;
+    }
+  </style>
 </html>
