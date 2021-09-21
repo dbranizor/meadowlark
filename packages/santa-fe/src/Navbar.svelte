@@ -15,7 +15,5 @@
     <div class="flex px-2 py-1">
         <slot name="center uppercase tracking-wide font-semibold text-sm lg:text-xs w-68">Label</slot>
     </div>
-    <div class="flex">
-        <slot name="links">Action Buttons</slot>
-    </div>
+    <slot name="links" >Action Buttons</slot>
 </nav>

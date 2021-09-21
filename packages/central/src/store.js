@@ -10,12 +10,20 @@ export const writable = (initial_value = 0) => {
     }
   
     const set = (new_value) => {
-      if (value === new_value) return         // same value, exit
+      console.log('dingo store Checking Value', new_value)
+      if (value === new_value) {
+        console.log('dingo store  Value same returning', new_value, value)
+        return;
+      }         // same value, exit
       value = new_value                       // update value
+      console.log('dingo store telling subs value is updated', value)
       subs.forEach(sub => sub(value))         // update subscribers
     }
   
-    const update = (update_fn) => set(update_fn(value))   // update function
+    const update = (update_fn) => {
+      console.log('dingo updating')
+      set(update_fn(value));
+    }   // update function
   
     return { subscribe, set, update }       // store contract
   }

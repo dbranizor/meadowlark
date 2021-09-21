@@ -1,18 +1,21 @@
 import { Timestamp } from "./timestamp";
 import * as merkle from "./merkle";
 import { makeClientId } from "./Utilities.mjs";
-import { buildSchema, insert, setWorker, apply, sync } from "./database.js";
-import { setClock, makeClock } from "./clock";
-import Environment from "./environment-state";
+import { buildSchema, insert, apply, sync } from "./database.js";
+import { setClock, makeClock } from "./clock.js";
+import {bootstrap, workerService} from "./datastores.js"
+import Environment from "./environment-state.js";
 const start = () =>
   setClock(makeClock(new Timestamp(0, 0, makeClientId(true))));
 const environment = {};
 const setEnvironment = (env) => Environment.set(env);
 Environment.subscribe((env) => (environment = env));
 
-function runInterval() {
-  const syncInterval = setInterval(async () => {
+let syncInterval;
+function startSync() {
+  syncInterval = setInterval(async () => {
     try {
+      console.log('dingo Running Sync')
       await sync();
       Environment.update((env) => Object.assign(env, { isOffline: false }));
     } catch (e) {
@@ -24,11 +27,15 @@ function runInterval() {
     }
     // TODO: Make this configurable
   }, 4000);
-  return syncInterval;
+}
+
+function stopSync() {
+  clearInterval(syncInterval);
 }
 
 export {
-  runInterval,
+  startSync,
+  stopSync,
   Environment,
   Timestamp,
   merkle,
@@ -36,7 +43,8 @@ export {
   buildSchema,
   insert,
   start,
-  setWorker,
   setEnvironment,
+  bootstrap,
+  workerService,
   apply,
 };

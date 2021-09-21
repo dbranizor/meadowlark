@@ -1,4 +1,4 @@
-import { Timestamp, MutableTimestamp } from "./timestamp";
+import { Timestamp, MutableTimestamp } from "./timestamp.js";
 let _clock = null;
 
 function setClock(clock) {

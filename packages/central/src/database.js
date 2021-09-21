@@ -1,28 +1,29 @@
 import { makeClientId } from "./Utilities.mjs";
-import { getClock } from "./clock";
-import { Timestamp } from "./timestamp";
-import * as merkle from "./merkle";
-import Environment from "./environment-state";
-import MessageState from "./messages-state";
-
-let _worker;
+import { getClock } from "./clock.js";
+import { Timestamp } from "./timestamp.js";
+import * as merkle from "./merkle.js";
+import Environment from "./environment-state.js";
+import MessageState from "./messages-state.js";
+import {workerService} from './datastores.js'
 let environment = {};
 let messages = [];
 let unsubscribes = [];
-
 unsubscribes.push(
   Environment.subscribe((e) => (environment = e)),
-  MessageState.subscribe((m) => (messages = m))
+  MessageState.subscribe((m) => (messages = m)),
 );
-const setWorker = (worker) => {
-  _worker = worker;
-};
-const getWorker = () => _worker;
+
 
 const apply = (locMessages = []) => {
+
+  if(!workerService.worker){
+    throw new Error(`Error: No Worker`)
+    return;
+  }
+  console.log("dingo store database worker in apply", worker);
   let clock = getClock();
-  _worker.postMessage({ type: "db-compare-messages", messages: locMessages });
-  _worker.onmessage = function (e) {
+  workerService.worker.postMessage({ type: "db-compare-messages", messages: locMessages });
+  workerService.worker.onmessage = function (e) {
     const applies = [];
     if (e.data.type === "existing-messages") {
       const existingMessages = e.data.result || [];
@@ -45,9 +46,10 @@ const apply = (locMessages = []) => {
           MessageState.add(msg);
         }
       });
-      _worker.postMessage({ type: "db-apply", messages: applies });
+      workerService.worker.postMessage({ type: "db-apply", messages: applies });
       console.log("dingo existing messages", e.data);
     }
+    console.log("dingo what message is this?", e.data);
     if (e.data.type === "applied-messages") {
       // sync messages
       console.log("dingo should apply sync here", e.data, environment);
@@ -77,15 +79,15 @@ async function post(data) {
   }
   return res.data;
 }
-function receiveMessages(messages = []){
-  messages.forEach(msg => {
-    Timestamp.receive(getClock(), Timestamp.parse(msg.timestamp))
-  })
-  apply(messages)
+function receiveMessages(messages = []) {
+  messages.forEach((msg) => {
+    Timestamp.receive(getClock(), Timestamp.parse(msg.timestamp));
+  });
+  apply(messages);
 }
 async function sync(initialMessages = [], since = null) {
   console.log("dingo running sync", environment);
-  if (!environment.syncEnabled) {
+  if (environment.syncDisabled) {
     return;
   }
 
@@ -125,6 +127,8 @@ async function sync(initialMessages = [], since = null) {
 
     console.log("dingo returning");
     return sync([], diffTime);
+  } else {
+    console.log("dingo sync good not re-running");
   }
 }
 
@@ -172,4 +176,4 @@ const insert = (table, row) => {
   // });
 };
 
-export { sync, buildSchema, insert, setWorker, apply };
+export { sync, buildSchema, insert, apply };
