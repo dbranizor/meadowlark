@@ -27,16 +27,22 @@ const sqlMessages = `CREATE TABLE if not exists messages
    row TEXT,
    column TEXT,
    value TEXT,
-   PRIMARY KEY(timestamp, group_id))`;
+   PRIMARY KEY(timestamp, group_id))`
+
+const dbSingletonFunc = async () => {
+  const db = await initSqlJs({ locateFile: (file) => file });
+  sqlFS = new SQLiteFS(db.FS, idbBackend);
+  db.register_for_idb(sqlFS);
+
+  db.FS.mkdir("/blocked");
+  db.FS.mount(sqlFS, {}, "/blocked");
+  console.log('dingo setting up db setup', db)
+  return db;
+}
 
 async function _init() {
   console.log("dingo setting up db");
-  SQL = await initSqlJs({ locateFile: (file) => file });
-  sqlFS = new SQLiteFS(SQL.FS, idbBackend);
-  SQL.register_for_idb(sqlFS);
-
-  SQL.FS.mkdir("/blocked");
-  SQL.FS.mount(sqlFS, {}, "/blocked");
+  SQL = await dbSingletonFunc();
   self.postMessage({ type: "initialized_database" });
 }
 
@@ -67,7 +73,8 @@ function closeDatabase() {
 
 async function getDatabase() {
   if (_db == null) {
-    console.log("dingo creating db");
+    console.log("dingo creating db", SQL);
+    SQL = SQL ? SQL : await dbSingletonFunc();
     _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
 
     // Should ALWAYS use the journal in memory mode. Doesn't make
@@ -293,7 +300,7 @@ let methods = {
   count,
 };
 
-if (typeof self !== "undefined") {
+if (typeof self !== "undefined") { 
   self.onmessage = async (msg) => {
     switch (msg.data.type) {
       case "search":

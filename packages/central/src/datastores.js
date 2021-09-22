@@ -1,66 +1,48 @@
 import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
 
-class WorkerService {
-  _worker = false;
-  _schema = {};
-
-  get worker() {
-    // if (!_worker) {
-    //   throw new Error(`Worker Not Instantiated`);
-    // }
-    return this._worker;
-  }
-
-  set worker(w) {
-    this._worker = w;
-  }
-
-  get schema() {
-    return this._schema;
-  }
-
-  set schema(s) {
-    this._schema = JSON.parse(JSON.stringify(s));
-  }
-}
-
-const workerService = new WorkerService();
+const getWorker = () => {
+  console.log("dingo how many times does this run getWorker?");
+  const newWorker = new Worker(new URL("../lib/sync.js", import.meta.url));
+  initBackend(newWorker);
+  return newWorker;
+};
 
 const bootstrap = (sch) => {
   let schema = sch;
-  const newWorker = new Worker(new URL("../lib/sync.js", import.meta.url));
-  workerService.worker = newWorker;
-  workerService.schema = sch;
-  console.log(
-    "dingo worker being set",
-    workerService.schema,
-    workerService.worker
-  );
+  const worker = getWorker();
+  return new Promise((res, err) => {
+    worker.postMessage({ type: "ui-invoke", name: "init" });
+    worker.onmessage = function (e) {
+      console.log(
+        "dingo worker event",
+        e,
+        e.data.type === "initialized_database"
+      );
+      if (e.data.type === "initialized_database") {
 
-  initBackend(workerService.worker);
-  workerService.worker.postMessage({ type: "ui-invoke", name: "init" });
-  workerService.worker.onmessage = function (e) {
-    console.log(
-      "dingo worker event",
-      e,
-      e.data.type === "initialized_database"
-    );
-    if (e.data.type === "initialized_database") {
-      console.log("dingo initializing database");
-      workerService.worker.postMessage({
-        type: "db-run",
-        sql: "select * from messages",
-      });
-      workerService.worker.postMessage({
-        type: "db-init",
-        schema,
-      });
-    }
+        console.log("dingo initializing database");
+        worker.postMessage({
+          type: "db-run",
+          sql: "select * from messages",
+        });
+        worker.postMessage({
+          type: "db-init",
+          schema,
+        });
+        return res;
+      }
 
-    if (e.data.type === "applied-messages") {
-      console.log("dingo results", e.data);
-    }
-  };
+      if (e.data.type === "applied-messages") {
+        console.log("dingo results", e.data);
+      }
+    };
+  });
 };
 
-export { bootstrap, workerService };
+
+const handleWorkerMessages = () => {
+  const worker = getWorker();
+  
+}
+
+export { bootstrap, getWorker };

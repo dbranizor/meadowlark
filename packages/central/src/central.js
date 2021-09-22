@@ -3,7 +3,7 @@ import * as merkle from "./merkle";
 import { makeClientId } from "./Utilities.mjs";
 import { buildSchema, insert, apply, sync } from "./database.js";
 import { setClock, makeClock } from "./clock.js";
-import {bootstrap, workerService} from "./datastores.js"
+import {bootstrap,getWorker} from "./datastores.js"
 import Environment from "./environment-state.js";
 const start = () =>
   setClock(makeClock(new Timestamp(0, 0, makeClientId(true))));
@@ -43,8 +43,9 @@ export {
   buildSchema,
   insert,
   start,
+  sync,
   setEnvironment,
   bootstrap,
-  workerService,
   apply,
+  getWorker
 };

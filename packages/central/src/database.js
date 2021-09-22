@@ -4,7 +4,7 @@ import { Timestamp } from "./timestamp.js";
 import * as merkle from "./merkle.js";
 import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
-import {workerService} from './datastores.js'
+import {workerService,getWorker} from './datastores.js'
 let environment = {};
 let messages = [];
 let unsubscribes = [];
@@ -14,49 +14,62 @@ unsubscribes.push(
 );
 
 
-const apply = (locMessages = []) => {
+const handleCompareMessages = () => {
+  const worker = getWorker()
+  return new Promise((res, rej) => {
+    worker.onmessage = (e) => {
+      if(e.data.type === "existing-messages"){
+        const existingMessages = e.data.result || [];
+        locMessages.forEach((msg) => {
+          const existingMessage = existingMessages.find(
+            (e) =>
+              e.dataset === msg.dataset &&
+              e.row === msg.row &&
+              e.column === msg.column
+          );
+          if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
+            applies.push(msg);
+          }
+  
+          if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
+            clock.merkle = merkle.insert(
+              clock.merkle,
+              Timestamp.parse(msg.timestamp)
+            );
+            MessageState.add(msg);
+          }
+        });
+        worker.postMessage({ type: "db-apply", messages: applies });
+        console.log("dingo existing messages", e.data);
+      }
+      if(e.data.type === "applied-messages") {
+        console.log("Messages Are Applied", e.data);
+        return res(data);
+      }
+    }
+  })
+}
 
-  if(!workerService.worker){
+const apply = async (locMessages = []) => {
+  const worker = getWorker();
+  if(!worker){
+    console.error('dingo no worker',   worker, newSecret(), newSecret())
     throw new Error(`Error: No Worker`)
     return;
   }
   console.log("dingo store database worker in apply", worker);
   let clock = getClock();
-  workerService.worker.postMessage({ type: "db-compare-messages", messages: locMessages });
-  workerService.worker.onmessage = function (e) {
-    const applies = [];
-    if (e.data.type === "existing-messages") {
-      const existingMessages = e.data.result || [];
-      locMessages.forEach((msg) => {
-        const existingMessage = existingMessages.find(
-          (e) =>
-            e.dataset === msg.dataset &&
-            e.row === msg.row &&
-            e.column === msg.column
-        );
-        if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
-          applies.push(msg);
-        }
-
-        if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
-          clock.merkle = merkle.insert(
-            clock.merkle,
-            Timestamp.parse(msg.timestamp)
-          );
-          MessageState.add(msg);
-        }
-      });
-      workerService.worker.postMessage({ type: "db-apply", messages: applies });
-      console.log("dingo existing messages", e.data);
-    }
-    console.log("dingo what message is this?", e.data);
-    if (e.data.type === "applied-messages") {
-      // sync messages
-      console.log("dingo should apply sync here", e.data, environment);
-      sync(locMessages);
-    }
-  };
+  worker.postMessage({ type: "db-compare-messages", messages: locMessages });
+  let records;
+  try {
+    records = await handleCompareMessages()
+  } catch (error) {
+    throw new Error(`Error: `, error)
+  }
+  
 };
+
+
 
 async function post(data) {
   console.log("diongo running fetch", environment, environment.user_id);

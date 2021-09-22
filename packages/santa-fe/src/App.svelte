@@ -3,17 +3,19 @@
 <script>
   import Toasters from "./Toasters.svelte";
   import { onMount } from "svelte";
-  import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
+
   import {
     insert,
     start,
     setEnvironment,
     startSync,
+    getWorker,
     stopSync,
+    sync,
   } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
-import { bootstrap } from "@meadowlark-labs/central/src/datastores";
+  import { bootstrap } from "@meadowlark-labs/central/src/datastores";
 
   start();
   const schema = {
@@ -62,7 +64,7 @@ import { bootstrap } from "@meadowlark-labs/central/src/datastores";
   let selectedUser = testUsers[1].display;
   let centralConfig = {
     user_id: selectedUser,
-    syncDisabled: true,
+    syncDisabled: false,
     syncUrl: "https://localhost/central-park",
     group_id: "meadowlark",
     debug: true,
@@ -85,42 +87,43 @@ import { bootstrap } from "@meadowlark-labs/central/src/datastores";
       console.log("dingo adding new message");
       const event = { cat: newType, msg: newMessage };
       insert("events", event);
-      worker.postMessage({ type: "db-get-messages" });
       displayedEvents = [...displayedEvents, { cat: newType, msg: newMessage }];
     }
   };
 
   function handleEnableSync(event) {
     console.log("Got Call to Enable Sync", event);
-    const isOffline = !centralConfig.isOffline;
-    const syncDisabled = !centralConfig.syncDisabled;
-    console.log(
-      "DINGO RUNNIJNG INTERVAL FUNCTION",
-      isOffline,
-      syncDisabled,
-      centralConfig.isOffline,
-      centralConfig.syncDisabled
-    );
+    sync();
+    // const isOffline = !centralConfig.isOffline;
+    // const syncDisabled = !centralConfig.syncDisabled;
+    // console.log(
+    //   "DINGO RUNNIJNG INTERVAL FUNCTION",
+    //   syncDisabled,
+    //   centralConfig.syncDisabled,
+    //   isOffline,
+    //   centralConfig.isOffline,
 
-    EnvironmentState.update((env) => {
-      const newConfig = Object.assign(env, { isOffline, syncDisabled });
-      console.log("dingo updating config", newConfig);
-      return newConfig;
-    });
-    if (syncDisabled) {
-      console.log("stopping sync");
-      stopSync();
-    } else {
-      console.log("running sync", isOffline);
-      startSync();
-    }
+    // );
+
+    // EnvironmentState.update((env) => {
+    //   const newConfig = Object.assign(env, { isOffline, syncDisabled });
+    //   console.log("dingo updating config", newConfig);
+    //   return newConfig;
+    // });
+    // if (syncDisabled) {
+    //   console.log("stopping sync");
+    //   stopSync();
+    // } else {
+    //   console.log("starting sync", isOffline);
+    //   startSync();
+    // }
   }
-  onMount(() => {
+  onMount(async () => {
     /**Test dingo code*/
     displayedEvents = [...events];
 
-    bootstrap(schema)
-
+    await bootstrap(schema);
+    
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
     // 	event: [],
@@ -144,7 +147,8 @@ import { bootstrap } from "@meadowlark-labs/central/src/datastores";
             ? 'bg-red-500 hover:bg-red-800 text-gray-100 hover:text-gray-200 '
             : ' bg-background-ternary hover:bg-gray-600 text-gray-100 hover:text-gray-200 '}px-2 py-2 flex items-center font-bold"
         >
-          {centralConfig.syncDisabled ? "Start " : " Stop"} Sync
+          <!-- {centralConfig.syncDisabled ? "Start " : " Stop"} Sync -->
+          Sync
         </button>
         <span
           class="h-5 {centralConfig.isOffline

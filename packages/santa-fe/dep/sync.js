@@ -1,10 +1,8 @@
 import initSqlJs from '@jlongster/sql.js';
 // import { SQLiteFS } from '../..';
 import {SQLiteFS} from "absurd-sql"
-import * as uuid from 'uuid';
-import MemoryBackend from 'absurd-sql/dist/memory-backend';
 // import IndexedDBBackend from '../../indexeddb/backend';
-import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend';
+import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend.js';
 
 // Various global state for the demo
 
