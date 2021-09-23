@@ -138,7 +138,7 @@
 <svelte:window on:keydown={handleNewMessage} />
 <main>
   <div class="Dark">
-    <Navbar>
+    <Navbar class="bg-gray-500 text-gray-200">
       <span slot="name"> Santa-Fe </span>
       <div slot="links" class="flex">
         <button

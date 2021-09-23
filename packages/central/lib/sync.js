@@ -27,22 +27,16 @@ const sqlMessages = `CREATE TABLE if not exists messages
    row TEXT,
    column TEXT,
    value TEXT,
-   PRIMARY KEY(timestamp, group_id))`
-
-const dbSingletonFunc = async () => {
-  const db = await initSqlJs({ locateFile: (file) => file });
-  sqlFS = new SQLiteFS(db.FS, idbBackend);
-  db.register_for_idb(sqlFS);
-
-  db.FS.mkdir("/blocked");
-  db.FS.mount(sqlFS, {}, "/blocked");
-  console.log('dingo setting up db setup', db)
-  return db;
-}
+   PRIMARY KEY(timestamp, group_id))`;
 
 async function _init() {
   console.log("dingo setting up db");
-  SQL = await dbSingletonFunc();
+  SQL = await initSqlJs({ locateFile: (file) => file });
+  sqlFS = new SQLiteFS(SQL.FS, idbBackend);
+  SQL.register_for_idb(sqlFS);
+
+  SQL.FS.mkdir("/blocked");
+  SQL.FS.mount(sqlFS, {}, "/blocked");
   self.postMessage({ type: "initialized_database" });
 }
 
@@ -73,8 +67,7 @@ function closeDatabase() {
 
 async function getDatabase() {
   if (_db == null) {
-    console.log("dingo creating db", SQL);
-    SQL = SQL ? SQL : await dbSingletonFunc();
+    console.log("dingo creating db");
     _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
 
     // Should ALWAYS use the journal in memory mode. Doesn't make
@@ -289,6 +282,10 @@ async function handleApplies(messages = []) {
       const sql = `INSERT INTO ${m.dataset}(id, ${m.column}) VALUES ('${m.row}', '${m.value}');`;
       console.log("dingo insert sql", sql);
       await run(sql, false);
+    } else {
+      const sql = `UPDATE ${m.dataset} SET ${m.column} = '${m.value}' WHERE id = '${m.row}' `;
+      console.log("dingo sql UPDATE command", sql);
+      await run(sql, false);
     }
   }
 }
@@ -300,7 +297,7 @@ let methods = {
   count,
 };
 
-if (typeof self !== "undefined") { 
+if (typeof self !== "undefined") {
   self.onmessage = async (msg) => {
     switch (msg.data.type) {
       case "search":

@@ -272,36 +272,36 @@ app.get("/ping", (req, res) => {
   res.send("ok");
 });
 
-var server = https
-  .createServer(
-    {
-      key: fs.readFileSync(path.join("certs/key.pem")),
-      cert: fs.readFileSync(path.join("certs/server.crt")),
-    },
-    app
-  )
-  .listen(process.env.PORT, function () {
-    console.log("HTTPS Server Listening on Port ", process.env.PORT);
-  });
+// var server = https
+//   .createServer(
+//     {
+//       key: fs.readFileSync(path.join("certs/key.pem")),
+//       cert: fs.readFileSync(path.join("certs/server.crt")),
+//     },
+//     app
+//   )
+//   .listen(process.env.PORT, function () {
+//     console.log("HTTPS Server Listening on Port ", process.env.PORT);
+//   });
 
-server.on("error", function (e) {
-  if (e.code === "EADDRINUSE") {
-    console.log(
-      "Error: Port %d is already in use, select a different port.",
-      port
-    );
-  } else if (e.code === "EACCES") {
-    console.log(
-      "Error: This process does not have permission to listen on port %d.",
-      port
-    );
-  }
-  console.log(e);
-  process.exit(1);
-});
+// server.on("error", function (e) {
+//   if (e.code === "EADDRINUSE") {
+//     console.log(
+//       "Error: Port %d is already in use, select a different port.",
+//       port
+//     );
+//   } else if (e.code === "EACCES") {
+//     console.log(
+//       "Error: This process does not have permission to listen on port %d.",
+//       port
+//     );
+//   }
+//   console.log(e);
+//   process.exit(1);
+// });
 
-server.on("close", function () {
-  console.log("STEELCASE Server stopped.");
-});
+// server.on("close", function () {
+//   console.log("STEELCASE Server stopped.");
+// });
 
-// app.listen(8007)
+app.listen(8008)

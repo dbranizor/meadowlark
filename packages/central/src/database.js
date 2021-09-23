@@ -4,23 +4,26 @@ import { Timestamp } from "./timestamp.js";
 import * as merkle from "./merkle.js";
 import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
-import {workerService,getWorker} from './datastores.js'
+import { workerService, getWorker } from "./datastores.js";
 let environment = {};
 let messages = [];
 let unsubscribes = [];
 unsubscribes.push(
   Environment.subscribe((e) => (environment = e)),
-  MessageState.subscribe((m) => (messages = m)),
+  MessageState.subscribe((m) => (messages = m))
 );
 
-
-const handleCompareMessages = () => {
-  const worker = getWorker()
+const handleApplyMessages = (messages) => {
+  let clock = getClock();
+  const worker = getWorker();
+  const applies = [];
+  worker.postMessage({ type: "db-compare-messages", messages });
   return new Promise((res, rej) => {
+    console.log('dingo inside of handlecomparemessages promise', clock);
     worker.onmessage = (e) => {
-      if(e.data.type === "existing-messages"){
+      if (e.data.type === "existing-messages") {
         const existingMessages = e.data.result || [];
-        locMessages.forEach((msg) => {
+        messages.forEach((msg) => {
           const existingMessage = existingMessages.find(
             (e) =>
               e.dataset === msg.dataset &&
@@ -30,7 +33,7 @@ const handleCompareMessages = () => {
           if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
             applies.push(msg);
           }
-  
+
           if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
             clock.merkle = merkle.insert(
               clock.merkle,
@@ -42,34 +45,31 @@ const handleCompareMessages = () => {
         worker.postMessage({ type: "db-apply", messages: applies });
         console.log("dingo existing messages", e.data);
       }
-      if(e.data.type === "applied-messages") {
+      if (e.data.type === "applied-messages") {
         console.log("Messages Are Applied", e.data);
-        return res(data);
+        return res(e.data);
       }
-    }
-  })
-}
+    };
+  });
+};
 
 const apply = async (locMessages = []) => {
   const worker = getWorker();
-  if(!worker){
-    console.error('dingo no worker',   worker, newSecret(), newSecret())
-    throw new Error(`Error: No Worker`)
-    return;
+  if (!worker) {
+    console.error("dingo no worker", worker, newSecret(), newSecret());
+    throw new Error(`Error: No Worker`);
   }
   console.log("dingo store database worker in apply", worker);
-  let clock = getClock();
-  worker.postMessage({ type: "db-compare-messages", messages: locMessages });
+  
+  console.log('dingo ')
   let records;
   try {
-    records = await handleCompareMessages()
+    records = await handleApplyMessages(locMessages);
   } catch (error) {
-    throw new Error(`Error: `, error)
+    throw new Error(`Error: `, error);
   }
-  
+  console.log("dingo records", records);
 };
-
-
 
 async function post(data) {
   console.log("diongo running fetch", environment, environment.user_id);
@@ -81,6 +81,7 @@ async function post(data) {
     referrerPolicy: "no-referrer",
     body: JSON.stringify(data),
     headers: {
+      "Access-Control-Allow-Origin": "*",
       "Content-Type": "application/json",
       authorization: environment.user_id,
     },
@@ -180,7 +181,7 @@ const insert = (table, row) => {
       timestamp: Timestamp.send(getClock()).toString(),
     };
   });
-
+  console.log("dingo calling apply on new messages", messages);
   apply(messages);
   // console.log("dingo object", messages);
   // messages.forEach((m) => {
