@@ -1,18 +1,21 @@
 import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
 
 const getWorker = () => {
-  console.log("dingo how many times does this run getWorker?");
-  const newWorker = new Worker(new URL("../lib/sync.js", import.meta.url));
-  initBackend(newWorker);
-  return newWorker;
+  if(!window.worker){
+    console.log("dingo how many times does this run getWorker?");
+    const newWorker = new Worker(new URL("../lib/sync.js", import.meta.url));
+    initBackend(newWorker);
+    window.worker = newWorker;
+  }
+
 };
 
 const bootstrap = (sch) => {
   let schema = sch;
-  const worker = getWorker();
+  getWorker();
   return new Promise((res, err) => {
-    worker.postMessage({ type: "ui-invoke", name: "init" });
-    worker.onmessage = function (e) {
+    window.worker.postMessage({ type: "ui-invoke", name: "init" });
+    window.worker.onmessage = function (e) {
       console.log(
         "dingo worker event",
         e,
@@ -21,11 +24,11 @@ const bootstrap = (sch) => {
       if (e.data.type === "initialized_database") {
 
         console.log("dingo initializing database");
-        worker.postMessage({
+        window.worker.postMessage({
           type: "db-run",
           sql: "select * from messages",
         });
-        worker.postMessage({
+        window.worker.postMessage({
           type: "db-init",
           schema,
         });
@@ -40,9 +43,7 @@ const bootstrap = (sch) => {
 };
 
 
-const handleWorkerMessages = () => {
-  const worker = getWorker();
-  
-}
+
+
 
 export { bootstrap, getWorker };

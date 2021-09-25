@@ -8,9 +8,6 @@
     insert,
     start,
     setEnvironment,
-    startSync,
-    getWorker,
-    stopSync,
     sync,
   } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
@@ -123,7 +120,7 @@
     displayedEvents = [...events];
 
     await bootstrap(schema);
-    
+
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
     // 	event: [],

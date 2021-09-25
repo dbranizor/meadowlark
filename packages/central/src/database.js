@@ -15,12 +15,12 @@ unsubscribes.push(
 
 const handleApplyMessages = (messages) => {
   let clock = getClock();
-  const worker = getWorker();
+  getWorker();
   const applies = [];
-  worker.postMessage({ type: "db-compare-messages", messages });
+  window.worker.postMessage({ type: "db-compare-messages", messages });
   return new Promise((res, rej) => {
     console.log('dingo inside of handlecomparemessages promise', clock);
-    worker.onmessage = (e) => {
+    window.worker.onmessage = (e) => {
       if (e.data.type === "existing-messages") {
         const existingMessages = e.data.result || [];
         messages.forEach((msg) => {
@@ -42,7 +42,7 @@ const handleApplyMessages = (messages) => {
             MessageState.add(msg);
           }
         });
-        worker.postMessage({ type: "db-apply", messages: applies });
+        window.worker.postMessage({ type: "db-apply", messages: applies });
         console.log("dingo existing messages", e.data);
       }
       if (e.data.type === "applied-messages") {
@@ -54,8 +54,8 @@ const handleApplyMessages = (messages) => {
 };
 
 const apply = async (locMessages = []) => {
-  const worker = getWorker();
-  if (!worker) {
+  getWorker();
+  if (!window.worker) {
     console.error("dingo no worker", worker, newSecret(), newSecret());
     throw new Error(`Error: No Worker`);
   }
@@ -186,7 +186,7 @@ const insert = (table, row) => {
   // console.log("dingo object", messages);
   // messages.forEach((m) => {
   // const sql = `INSERT INTO messages (dataset, row, column, value, timestamp) VALUES ('${m.dataset}', '${m.row}', '${m.column}', '${m.value}', '${m.timestamp}')`;
-  // worker.postMessage({ type: "db-run", sql });
+  // window.worker.postMessage({ type: "db-run", sql });
   // });
 };
 

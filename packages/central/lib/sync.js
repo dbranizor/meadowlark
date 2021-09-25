@@ -12,6 +12,8 @@ let cacheSize = 5000;
 let pageSize = 8192;
 let dbName = `fts.sqlite`;
 
+let fakeValue = 0;
+
 let idbBackend = new IndexedDBBackend();
 let sqlFS;
 
@@ -37,15 +39,25 @@ async function _init() {
 
   SQL.FS.mkdir("/blocked");
   SQL.FS.mount(sqlFS, {}, "/blocked");
-  self.postMessage({ type: "initialized_database" });
+  fakeValue = 100;
 }
 
-function init() {
-  if (ready) {
+async function init(schema = false) {
+  if (ready && schuema) {
+    await handleSchema(schema);
+    self.postMessage({ type: "initialized_database" });
     return ready;
   }
 
-  ready = _init();
+  if (ready) {
+    self.postMessage({ type: "initialized_database" });
+    return ready;
+  }
+
+  ready = await _init();
+  console.log("dingo building tables");
+  run(sqlMessages);
+  return self.postMessage({ type: "initialized_database" });
 }
 
 function output(msg) {
@@ -67,7 +79,7 @@ function closeDatabase() {
 
 async function getDatabase() {
   if (_db == null) {
-    console.log("dingo creating db");
+    console.log("dingo creating db", fakeValue);
     _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
 
     // Should ALWAYS use the journal in memory mode. Doesn't make
@@ -266,28 +278,55 @@ async function handleCompare(messages) {
   }
 }
 
+async function handleSchema(schema = {}) {
+  console.log("dingo running handleSchema", schema);
+  const statement = buildSchema(msg.data.schema);
+  console.log("dingo built schema", statement);
+  Promise.all(
+    Object.keys(statement).map(async (key) => {
+      console.log(`Initing Table: ${key}`);
+      await run(statement[key]);
+      return;
+    })
+  );
+}
+
 async function handleApplies(messages = []) {
   const db = await getDatabase();
+  console.log("dingo running handleAPplies", messages);
 
-  await Promise.all(messages.map(processMessages));
+  await messages.reduce(async (acc, curr) => {
+    console.log("dingo awaiting acc");
+    await acc;
+    console.log("dingo acc");
+    const sql = `SELECT * from ${curr.dataset} where id = '${curr.row}';`;
+    let row;
+    try {
+      row = await get(sql);
+    } catch (error) {
+      throw new Error(`Error: `, error);
+    }
+    console.log("HandleRow Set Row Dingo", row, curr);
+    if (!row || !row.length) {
+      const sql = `INSERT INTO ${curr.dataset}(id, ${curr.column}) VALUES ('${curr.row}', '${curr.value}');`;
+      console.log("dingo sql", sql);
+      try {
+        await run(sql, false);
+      } catch (error) {
+        throw new Error(`Error: `, error);
+      }
+    } else {
+      try {
+        const sql = `UPDATE ${curr.dataset} SET ${curr.column} = '${curr.value}' WHERE id = '${curr.row}' `;
+        await run(sql, false);
+      } catch (error) {
+        throw new Error(`Error: `, error);
+      }
+    }
+    return acc;
+  }, Promise.resolve());
   console.log("Applied Message");
   return true;
-  async function processMessages(m) {
-    const sql = `SELECT * from ${m.dataset} where  id = '${m.row}';`;
-    console.log("dingo sql", sql);
-    const row = await get(sql);
-    console.log("dingo row", row);
-    if (!row || !row.length) {
-      //TODO : Process non-strings
-      const sql = `INSERT INTO ${m.dataset}(id, ${m.column}) VALUES ('${m.row}', '${m.value}');`;
-      console.log("dingo insert sql", sql);
-      await run(sql, false);
-    } else {
-      const sql = `UPDATE ${m.dataset} SET ${m.column} = '${m.value}' WHERE id = '${m.row}' `;
-      console.log("dingo sql UPDATE command", sql);
-      await run(sql, false);
-    }
-  }
 }
 
 let methods = {
@@ -328,24 +367,17 @@ if (typeof self !== "undefined") {
         get(msg.data.sql);
         break;
       case "db-init":
-        console.log("dingo building schema");
-        const statement = buildSchema(msg.data.schema);
-        console.log("dingo built schema", statement);
-        Object.keys(statement).forEach((key) => {
-          console.log(`Initing Table: ${key}`);
-          run(statement[key]);
-        });
-        console.log("dingo built tables");
-
-        run(sqlMessages);
-        console.log("dingo ran sqlMessages", sqlMessages);
-
         break;
       case "ui-invoke":
         if (methods[msg.data.name] == null) {
           throw new Error("Unknown method: " + msg.data.name);
         }
-        methods[msg.data.name]();
+        if (msg.data.arguments) {
+          methods[msg.data.name](msg.data.arguments);
+        } else {
+          methods[msg.data.name]();
+        }
+
         break;
     }
   };
