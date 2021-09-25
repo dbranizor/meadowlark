@@ -18,10 +18,10 @@ const messageSchema = {
   },
 };
 
-const InitMessageState = () => {
+const InitMessageState = function ()  {
   const { set, subscribe, update } = writable({});
   const methods = {
-    init(schema) {
+    init: async function (schema) {
       const messageStateSchema = Object.assign(messageSchema, schema);
       await bootstrap(messageStateSchema);
     },

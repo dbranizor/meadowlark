@@ -1,5 +1,6 @@
 import { Timestamp } from "./timestamp";
 import * as merkle from "./merkle";
+import {writable} from './store'
 import { makeClientId } from "./Utilities.mjs";
 import { buildSchema, insert, apply, sync } from "./database.js";
 import { setClock, makeClock } from "./clock.js";
@@ -43,6 +44,7 @@ export {
   buildSchema,
   insert,
   start,
+  writable,
   sync,
   setEnvironment,
   bootstrap,
