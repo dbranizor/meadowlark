@@ -1,0 +1,59 @@
+<script>
+  import { select } from "@meadowlark-labs/central";
+  import Message from "./Message.svelte";
+  import { MessageCatalog } from "../../bootup.js";
+  import { onDestroy, onMount } from "svelte";
+  import MessageState from "./message-state";
+
+  export let standardMessages = [];
+
+  let localizedMessages = [];
+  let isLocalized = true;
+  let unsubscribes = [];
+
+  let query = `SELECT * FROM EVENTS WHERE tombstone <> 1`;
+  $: displayedMessages = isLocalized ? localizedMessages : standardMessages;
+
+  onMount(async () => {
+    if (MessageCatalog.hasOwnProperty("Message")) {
+      unsubscribes.push(
+        MessageState.subscribe(async (ms) => {
+          if (ms.init) {
+            isLocalized = true;
+            localizedMessages = await select(query);
+            console.log("dingo got records", localizedMessages);
+          } else {
+            console.log("dingo ms not inited yet", ms);
+          }
+        })
+      );
+    } else {
+      console.log("dingo Messages Are Not Localized");
+    }
+  });
+  onDestroy(() => {
+    unsubscribes.forEach((u) => u());
+  });
+  //   on:CLEAR_TOASTER={() =>
+  //             (displayedEvents = displayedEvents.filter(
+  //               (d) => d.id !== event.id
+  //             ))}
+</script>
+
+<div class="flex justify-end h-full w-full mr-2 mt-2">
+  <ul>
+    {#each displayedMessages as event}
+      <li>
+        <Message type="info" display={true} id={event.type}>
+          <span slot="header">
+            {event.cat}
+          </span>
+          <span slot="body">{event.msg}</span>
+        </Message>
+      </li>
+    {/each}
+  </ul>
+</div>
+
+<style>
+</style>

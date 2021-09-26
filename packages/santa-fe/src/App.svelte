@@ -12,9 +12,8 @@
   } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
-  import { bootstrap } from "@meadowlark-labs/central/src/datastores";
-import { localized } from "./bootup";
-
+  import Messages from "./components/messages/Messages.svelte";
+  import { localized } from "./bootup.js";
   start();
   const schema = {
     events: {
@@ -120,8 +119,8 @@ import { localized } from "./bootup";
     /**Test dingo code*/
     displayedEvents = [...events];
 
-    await localized('Message');
-    
+    await localized("Message");
+
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
     // 	event: [],
@@ -180,28 +179,7 @@ import { localized } from "./bootup";
         />
       </div>
     </div>
-    <div class="flex justify-end h-full w-full mr-2 mt-2">
-      <ul>
-        {#each displayedEvents as event}
-          <li>
-            <Toasters
-              type="info"
-              display={true}
-              id={event.type}
-              on:CLEAR_TOASTER={() =>
-                (displayedEvents = displayedEvents.filter(
-                  (d) => d.type !== event.type
-                ))}
-            >
-              <span slot="header">
-                {event.cat}
-              </span>
-              <span slot="body">{event.msg}</span>
-            </Toasters>
-          </li>
-        {/each}
-      </ul>
-    </div>
+    <Messages />
   </div>
 </main>
 

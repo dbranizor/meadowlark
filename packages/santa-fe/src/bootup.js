@@ -12,4 +12,4 @@ const localized = async function (components) {
   }, Promise.resolve());
 };
 
-export { localized };
+export { localized, MessageCatalog };

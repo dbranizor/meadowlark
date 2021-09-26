@@ -1,4 +1,4 @@
-import { writable, bootstrap } from "@meadowlark-labs/central";
+import { writable, bootstrap, sync } from "@meadowlark-labs/central";
 const messageSchema = {
   events: {
     id: "TEXT",
@@ -6,24 +6,25 @@ const messageSchema = {
     msg: "TEXT",
     coi: "TEXT",
   },
-  coi: {
-    id: "TEXT",
-    name: "text",
-    details: "text",
-  },
-  user_coi: {
-    id: "TEXT",
-    coi: "TEXT",
-    user: "text",
-  },
 };
 
-const InitMessageState = function ()  {
-  const { set, subscribe, update } = writable({});
+const InitMessageState = function () {
+  const { set, subscribe, update } = writable({
+    events: [],
+    init: false,
+  });
+
   const methods = {
     init: async function (schema) {
       const messageStateSchema = Object.assign(messageSchema, schema);
+      console.log("dingo message state running update");
       await bootstrap(messageStateSchema);
+      console.log("dingo message state ran update");
+      update((sync) => {
+        console.log("dingo messate state sync being set", sync);
+        sync.init = true;
+        return sync;
+      });
     },
   };
   return {
