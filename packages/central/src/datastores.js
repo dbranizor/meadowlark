@@ -22,7 +22,7 @@ const bootstrap = (sch) => {
       );
       if (e.data.type === "initialized_database") {
         console.log("dingo initialized database");
-        return res;
+        return res();
       }
 
       if (e.data.type === "applied-messages") {

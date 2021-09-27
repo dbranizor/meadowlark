@@ -17,7 +17,8 @@
   onMount(async () => {
     if (MessageCatalog.hasOwnProperty("Message")) {
       unsubscribes.push(
-        MessageState.subscribe(async (ms) => {
+        MessageState.ready.subscribe(async (ms) => {
+          console.log('dingo message state has event update', ms)
           if (ms.init) {
             isLocalized = true;
             localizedMessages = await select(query);

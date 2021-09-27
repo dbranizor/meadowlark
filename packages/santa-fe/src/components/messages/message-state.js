@@ -8,11 +8,15 @@ const messageSchema = {
   },
 };
 
+
+
 const InitMessageState = function () {
   const { set, subscribe, update } = writable({
-    events: [],
-    init: false,
+    events: []
   });
+
+  const SyncRoutable = writable(false);
+
 
   const methods = {
     init: async function (schema) {
@@ -20,9 +24,10 @@ const InitMessageState = function () {
       console.log("dingo message state running update");
       await bootstrap(messageStateSchema);
       console.log("dingo message state ran update");
-      update((sync) => {
-        console.log("dingo messate state sync being set", sync);
-        sync.init = true;
+      return SyncRoutable.update((sync) => {
+        console.log("dingo messate state sync being set", sync.init === true);
+        sync = true;
+        console.log("dingo messate state sync being set", sync.init === true);
         return sync;
       });
     },
@@ -31,6 +36,7 @@ const InitMessageState = function () {
     set,
     subscribe,
     update,
+    ready: SyncRoutable,
     ...methods,
   };
 };
