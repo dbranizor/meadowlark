@@ -11,18 +11,24 @@
   let isLocalized = true;
   let unsubscribes = [];
 
-  let query = `SELECT * FROM EVENTS WHERE tombstone <> 1`;
+  let syncReady = false;
+  let query = `SELECT * FROM events WHERE tombstone <> 1`;
   $: displayedMessages = isLocalized ? localizedMessages : standardMessages;
 
   onMount(async () => {
     if (MessageCatalog.hasOwnProperty("Message")) {
       unsubscribes.push(
+        MessageState.messages.subscribe(async (m) => {
+          localizedMessages = m;
+        }),
+        /**TODO: Move this into message-state.*/
         MessageState.ready.subscribe(async (ms) => {
-          console.log('dingo message state has event update', ms)
-          if (ms.init) {
+          console.log("dingo message state has event update", ms);
+          if (ms) {
             isLocalized = true;
+            console.log("dingo got records pre", localizedMessages);
             localizedMessages = await select(query);
-            console.log("dingo got records", localizedMessages);
+            console.log("dingo got records post", localizedMessages);
           } else {
             console.log("dingo ms not inited yet", ms);
           }

@@ -1,7 +1,6 @@
 <svelte:options accessors={true} />
 
 <script>
-  import Toasters from "./Toasters.svelte";
   import { onMount } from "svelte";
 
   import {
@@ -13,6 +12,7 @@
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
+  import MessageStore from "./components/messages/message-state";
   import { localized } from "./bootup.js";
   start();
   const schema = {
@@ -83,7 +83,7 @@
     if (e.code === "Enter") {
       console.log("dingo adding new message");
       const event = { cat: newType, msg: newMessage };
-      insert("events", event);
+      MessageStore.insert(event);
       displayedEvents = [...displayedEvents, { cat: newType, msg: newMessage }];
     }
   };

@@ -39,7 +39,8 @@ function select(sql) {
     console.log("dingo selecting", sql, window.worker);
     window.worker.postMessage({ type: "db-get", sql });
     window.worker.onmessage = function (e) {
-      if (e.data.type === "relsults") {
+      if (e.data.type === "results") {
+        console.log("dingo selecting results", e.data, e.data.results);
         return res(e.data.results);
       }
     };

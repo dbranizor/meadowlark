@@ -19,7 +19,7 @@ const handleApplyMessages = (messages) => {
   const applies = [];
   window.worker.postMessage({ type: "db-compare-messages", messages });
   return new Promise((res, rej) => {
-    console.log('dingo inside of handlecomparemessages promise', clock);
+    console.log("dingo inside of handlecomparemessages promise", clock);
     window.worker.onmessage = (e) => {
       if (e.data.type === "existing-messages") {
         const existingMessages = e.data.result || [];
@@ -60,15 +60,21 @@ const apply = async (locMessages = []) => {
     throw new Error(`Error: No Worker`);
   }
   console.log("dingo store database worker in apply", worker);
-  
-  console.log('dingo ')
+
+  console.log("dingo ");
   let records;
   try {
     records = await handleApplyMessages(locMessages);
   } catch (error) {
     throw new Error(`Error: `, error);
   }
-  console.log("dingo records", records);
+
+  try {
+    sync(locMessages);
+  } catch (error) {
+    throw new Error(`Error: ${error}`);
+  }
+  return records;
 };
 
 async function post(data) {
@@ -153,7 +159,7 @@ const buildSchema = (data) => {
     const tableValues = Object.values(data[curr]);
     const statement = tableNames.reduce((acc, scurr, ix) => {
       if (ix === 0) {
-        acc = `CREATE TABLE IF NOT EXISTS ${curr} (`;
+        acc = `CREATE TABLE IF NOT EXISTS ${curr} (tombstone integer,`;
       }
 
       if (ix === tableNames.length - 1) {
@@ -169,20 +175,37 @@ const buildSchema = (data) => {
   }, {});
 };
 
-const insert = (table, row) => {
+const insert = async (table, row) => {
   let id = makeClientId(true);
   let fields = Object.keys(row);
-  const messages = fields.map((k) => {
-    return {
+  const messages = [
+    ...fields.map((k) => {
+      return {
+        dataset: table,
+        row: row.id || id,
+        column: k,
+        value: row[k],
+        timestamp: Timestamp.send(getClock()).toString(),
+      };
+    }),
+    {
       dataset: table,
       row: row.id || id,
-      column: k,
-      value: row[k],
+      value: 0,
+      column: "tombstone",
       timestamp: Timestamp.send(getClock()).toString(),
-    };
-  });
+    },
+  ];
+
   console.log("dingo calling apply on new messages", messages);
-  apply(messages);
+  let records;
+  try {
+    records = await apply(messages);
+  } catch (error) {
+    throw new error(`Error: ${error}`);
+  }
+
+  return records;
   // console.log("dingo object", messages);
   // messages.forEach((m) => {
   // const sql = `INSERT INTO messages (dataset, row, column, value, timestamp) VALUES ('${m.dataset}', '${m.row}', '${m.column}', '${m.value}', '${m.timestamp}')`;

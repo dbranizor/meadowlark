@@ -9,25 +9,45 @@ const getWorker = () => {
   }
 };
 
+const bootstrapAppTables = () => {
+  window.worker.postMessage({ type: "ui-invoke", name: "init" });
+  getWorker();
+  return new Promise((res, rej) => {
+    return (window.worker.onmessage = function (e) {
+      if (e.data.type === "initialized_database") {
+        console.log("dingo initialized initial tables");
+        return res();
+      }
+    });
+  });
+};
+
 const bootstrap = (sch) => {
   let schema = sch;
   getWorker();
   return new Promise((res, err) => {
-    window.worker.postMessage({ type: "ui-invoke", name: "init" });
-    return (window.worker.onmessage = function (e) {
-      console.log(
-        "dingo worker event",
-        e,
-        e.data.type === "initialized_database"
-      );
-      if (e.data.type === "initialized_database") {
-        console.log("dingo initialized database");
-        return res();
-      }
+    bootstrapAppTables().then(() => {
+      console.log("dingo calling ui invoke with schema", schema);
+      window.worker.postMessage({
+        type: "ui-invoke",
+        name: "init",
+        arguments: schema,
+      });
+      return (window.worker.onmessage = function (e) {
+        console.log(
+          "dingo worker event",
+          e,
+          e.data.type === "initialized_database"
+        );
+        if (e.data.type === "initialized_database") {
+          console.log("dingo initialized database");
+          return res();
+        }
 
-      if (e.data.type === "applied-messages") {
-        console.log("dingo not applying results", e.data);
-      }
+        if (e.data.type === "applied-messages") {
+          console.log("dingo not applying results", e.data);
+        }
+      });
     });
   });
 };

@@ -40,10 +40,12 @@ async function _init() {
   SQL.FS.mkdir("/blocked");
   SQL.FS.mount(sqlFS, {}, "/blocked");
   fakeValue = 100;
+  return true;
 }
 
 async function init(schema = false) {
-  if (ready && schuema) {
+  console.log('dingo called init', schema, ready)
+  if (ready && schema) {
     await handleSchema(schema);
     self.postMessage({ type: "initialized_database" });
     return ready;
@@ -242,7 +244,7 @@ async function get(statement, post = true) {
   console.log("dingo SQL GET DAO get results: ", result);
 
   const resturnData = rowMapper(result);
-
+  console.log("dingo SQL GET DAO get results mapped: ", resturnData);
   post ? self.postMessage({ type: "results", results: resturnData }) : post;
   return resturnData;
 }
@@ -280,9 +282,9 @@ async function handleCompare(messages) {
 
 async function handleSchema(schema = {}) {
   console.log("dingo running handleSchema", schema);
-  const statement = buildSchema(msg.data.schema);
+  const statement = buildSchema(schema);
   console.log("dingo built schema", statement);
-  Promise.all(
+  return Promise.all(
     Object.keys(statement).map(async (key) => {
       console.log(`Initing Table: ${key}`);
       await run(statement[key]);
@@ -372,6 +374,7 @@ if (typeof self !== "undefined") {
         if (methods[msg.data.name] == null) {
           throw new Error("Unknown method: " + msg.data.name);
         }
+        console.log('dingo running ui-invoke', msg.data)
         if (msg.data.arguments) {
           methods[msg.data.name](msg.data.arguments);
         } else {
