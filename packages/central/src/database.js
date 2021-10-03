@@ -5,6 +5,8 @@ import * as merkle from "./merkle.js";
 import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
 import { workerService, getWorker } from "./datastores.js";
+import DatastoreState from "./datastore-state";
+
 let environment = {};
 let messages = [];
 let unsubscribes = [];
@@ -69,11 +71,6 @@ const apply = async (locMessages = []) => {
     throw new Error(`Error: `, error);
   }
 
-  try {
-    sync(locMessages);
-  } catch (error) {
-    throw new Error(`Error: ${error}`);
-  }
   return records;
 };
 
@@ -103,7 +100,9 @@ function receiveMessages(messages = []) {
   messages.forEach((msg) => {
     Timestamp.receive(getClock(), Timestamp.parse(msg.timestamp));
   });
-  apply(messages);
+  return apply(messages).then((records) => {
+    return records;
+  });
 }
 async function sync(initialMessages = [], since = null) {
   console.log("dingo running sync", environment);
@@ -130,8 +129,28 @@ async function sync(initialMessages = [], since = null) {
     throw new Error("network-failure");
   }
 
+  console.log(
+    `RESULTS Merkle: ${result.messages.length} ${result.merkle.hash || false}`
+  );
+
   if (result.messages.length > 0) {
-    receiveMessages(result.messages);
+    let groups = result.messages.reduce((acc, curr) => {
+      if (!acc[curr.dataset]) {
+        acc[curr.dataset] = [curr];
+      } else {
+        acc[curr.dataset] = [...acc[curr.dataset], curr];
+      }
+      return acc;
+    }, {});
+    let records = [];
+    Object.keys(groups).reduce(async (acc, curr) => {
+      let prevAcc = await acc;
+      let currRecords = await receiveMessages(groups[curr]);
+      currRecords.forEach((rec) => {
+        console.log("dingo adding record to internal memory store");
+        DatastoreState.addRecord(curr, rec);
+      });
+    }, Promise.resolve());
   }
 
   let diffTime = merkle.diff(result.merkle, getClock().merkle);
@@ -149,6 +168,7 @@ async function sync(initialMessages = [], since = null) {
     return sync([], diffTime);
   } else {
     console.log("dingo sync good not re-running");
+    return;
   }
 }
 
@@ -205,6 +225,12 @@ const insert = async (table, row) => {
     throw new error(`Error: ${error}`);
   }
 
+  try {
+    sync(messages);
+  } catch (error) {
+    throw new Error(`Error: ${error}`);
+  }
+
   return records;
   // console.log("dingo object", messages);
   // messages.forEach((m) => {
@@ -213,4 +239,4 @@ const insert = async (table, row) => {
   // });
 };
 
-export { sync, buildSchema, insert, apply };
+export { sync, buildSchema, insert, apply, receiveMessages };

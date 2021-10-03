@@ -6,15 +6,22 @@ describe("sync", function () {
   beforeEach(function () {
     db = new Database("test-db", { ":memory:": true });
     const table =
-      "CREATE TABLE IF NOT EXISTS fubar('fu' text, 'bar' text, 'id' text)";
+      "CREATE TABLE IF NOT EXISTS events('id' text, 'cat' text, 'msg' text, 'coi': text)";
     db.exec(table);
   });
 
-  it("should create tables", async () => {
-    const data = `insert into fubar("fu", "bar", "id")values('stuff', 'thatbar','1')`;
-    db.exec(data);
-    const results = db.prepare("SELECT * FROM fubar").get();
-    console.log("dingo results", JSON.stringify(results));
-    expect(results).to.not.be.undefined;
+  it("should recieve messages", async () => {
+    let events = [
+      {
+        cat: "test",
+        msg: "This is just a test",
+        coi: 'people'
+      },
+      {
+        cat: "email",
+        msg: "Check your emails",
+        coi: 'people'
+      },
+    ];
   });
 });

@@ -11,7 +11,8 @@ const messageSchema = {
 const InitMessageState = function () {
   const { set, subscribe, update } = writable({
     events: [],
-  });''
+  });
+  ("");
 
   const SyncReady = writable(false);
 

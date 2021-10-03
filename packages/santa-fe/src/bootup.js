@@ -1,4 +1,5 @@
 import Message from "./components/messages/message-state.js";
+import { DatastoreState } from "@meadowlark-labs/central";
 const MessageCatalog = {
   Message,
 };

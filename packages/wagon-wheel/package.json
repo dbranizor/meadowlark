@@ -1,27 +1,11 @@
 {
-  "name": "@meadowlark-labs/wagon-wheel",
-  "version": "0.0.3",
-  "description": "> TODO: description",
-  "author": "dbranizor <dbranizor@gmail.com>",
-  "homepage": "https://github.com/dbranizor/meadowlark#readme",
-  "license": "ISC",
-  "main": "lib/wagon-wheel.js",
-  "directories": {
-    "lib": "lib",
-    "test": "__tests__"
-  },
-  "files": [
-    "lib"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dbranizor/meadowlark.git"
-  },
+  "name": "svelte-app",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "start": "sirv public --no-clear",
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "start": "sirv public -p 8001 --no-clear"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
@@ -34,9 +18,7 @@
     "svelte": "^3.0.0"
   },
   "dependencies": {
-    "sirv-cli": "^1.0.0"
-  },
-  "bugs": {
-    "url": "https://github.com/dbranizor/meadowlark/issues"
+    "sirv-cli": "^1.0.0",
+    "svelte-table": "^0.1.19"
   }
 }

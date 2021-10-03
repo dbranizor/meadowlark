@@ -1,5 +1,5 @@
 import { initBackend } from "absurd-sql/dist/indexeddb-main-thread.js";
-
+import DatastoreState from "./datastore-state.js";
 const getWorker = () => {
   if (!window.worker) {
     console.log("dingo how many times does this run getWorker?");
@@ -24,6 +24,10 @@ const bootstrapAppTables = () => {
 
 const bootstrap = (sch) => {
   let schema = sch;
+  Object.keys(sch).forEach((s) => {
+    console.log("dingo adding reactive store for schema records", s);
+    DatastoreState.addDatastores(s);
+  });
   getWorker();
   return new Promise((res, err) => {
     bootstrapAppTables().then(() => {
@@ -33,6 +37,7 @@ const bootstrap = (sch) => {
         name: "init",
         arguments: schema,
       });
+
       return (window.worker.onmessage = function (e) {
         console.log(
           "dingo worker event",

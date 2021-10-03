@@ -1,6 +1,6 @@
 // let express = require("express");
-import express from "express"
-import sqlite3 from "better-sqlite3"
+import express from "express";
+import sqlite3 from "better-sqlite3";
 // let sqlite3 = require("better-sqlite3");
 import dotenv from "dotenv";
 // const dotenv = require("dotenv");
@@ -9,22 +9,22 @@ import bodyParser from "body-parser";
 // let cors = require("cors");
 import cors from "cors";
 
-import https from "https"
-import  {Timestamp, merkle} from "@meadowlark-labs/central";
+import https from "https";
+import { Timestamp, merkle } from "@meadowlark-labs/central";
 // const https = require("https");
 // let { Timestamp } = require("../deps/timestamp");
 // let merkle = require("../deps/merkle");
-
 
 // const {Timestamp, merkle} = Central;
 // const fs = require("fs");
 import fs from "fs";
 import path from "path";
-const __dirname = path.resolve()
+const __dirname = path.resolve();
 // const path = require("path");
 
 // const serveIndex = require("serve-index");
-import serveIndex from "serve-index"
+import serveIndex from "serve-index";
+import { URLSearchParams } from "url";
 let db = sqlite3(__dirname + "/db.sqlite");
 let app = express();
 dotenv.config();
@@ -69,40 +69,16 @@ const AppleGroup = {
   members: [...BeatlesGroup.members, { name: "Steelcase USER", online: null }],
 };
 
-// const setPrecense = (req) => {
-//   BeatlesGroup.members.forEach((g) => {
-//     if (g.name === req.headers.ssl_client_s_dn_cn) {
-//       g.online = new Date().toISOString();
-//       g.user_id = req.headers.ssl_client_s_dn_cn;
-//     }
-//   });
-
-//   AppleGroup.members.forEach((g) => {
-//     if (g.name === req.user_cn) {
-//       g.online = new Date().toISOString();
-//     }
-//   });
-
-//   req.groups = [BeatlesGroup, AppleGroup];
-// };
 const checkUser = (req, res, next) => {
   if (
     auth &&
-    (!req.headers.authorization ||
-      req.headers.authorization === "(null)")
+    (!req.headers.authorization || req.headers.authorization === "(null)")
   ) {
-    res.status("401").json({ error: "No Credentials Passed" });
+    req.user_cn = "Steelcase USER";
+    return next();
   } else {
     if (auth) {
-      // if (
-      //   req.headers.ssl_client_s_dn_cn === "John" ||
-      //   req.headers.ssl_client_s_dn_cn === "Paul" ||
-      //   req.headers.ssl_client_s_dn_cn === "George" ||
-      //   req.headers.ssl_client_s_dn_cn === "Ringo"
-      // ) {
-      //   setPrecense(req);
-      // }
-      console.log('dingo authorization',req.headers.authorization)
+      console.log("dingo authorization", req.headers.authorization);
       req.user_cn = req.headers.authorization;
     } else {
       // setPrecense(req);
@@ -238,14 +214,37 @@ app.all("/ping", (req, res) => {
   res.status(200).json({ pong: true });
 });
 
+app.get("/dev/status", (req, res) => {
+  console.log("dingo got status");
+  const urlQuery = new URLSearchParams(req.query);
+  if (!urlQuery.has("group_id")) {
+    res.status("500").statusMessage("No GROUP ID Passed");
+  }
+  const  group_id  = urlQuery.get("group_id");
+
+  let newMessages;
+  try {
+    newMessages = queryAll(`SELECT * FROM messages WHERE group_id = ? `, [
+      group_id,
+    ]);
+  } catch (error) {
+    throw new Error(`Error: ${error}`);
+  }
+  const merkle = getMerkle(group_id);
+
+  res.send(
+    JSON.stringify({ status: "ok", data: { messages: newMessages, merkle } })
+  );
+});
+
 app.post("/sync", (req, res) => {
   let { group_id, client_id, messages, merkle: clientMerkle } = req.body;
 
   let trie = addMessages(group_id, messages);
-  console.log('dingo sync called')
+  console.log("dingo sync called");
   let newMessages = [];
   if (clientMerkle) {
-    console.log('dingo clientMerkle')
+    console.log("dingo clientMerkle");
     let diffTime = merkle.diff(trie, clientMerkle);
     if (diffTime) {
       let timestamp = new Timestamp(diffTime, 0, "0").toString();
@@ -260,7 +259,7 @@ app.post("/sync", (req, res) => {
       }));
     }
   }
-  console.log('dingo sending')
+  console.log("dingo sending");
   // setPrecense(req);
   res.send(
     JSON.stringify({
