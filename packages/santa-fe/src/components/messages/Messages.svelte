@@ -1,5 +1,5 @@
 <script>
-  import { select } from "@meadowlark-labs/central";
+  import { select, DatastoreState } from "@meadowlark-labs/central";
   import Message from "./Message.svelte";
   import { MessageCatalog } from "../../bootup.js";
   import { onDestroy, onMount } from "svelte";
@@ -13,6 +13,7 @@
 
   let syncReady = false;
   let query = `SELECT * FROM events WHERE tombstone <> 1`;
+  let syncedRecords = [];
   $: displayedMessages = isLocalized ? localizedMessages : standardMessages;
 
   onMount(async () => {
@@ -29,8 +30,16 @@
             console.log("dingo got records pre", localizedMessages);
             localizedMessages = await select(query);
             console.log("dingo got records post", localizedMessages);
+            /**Subscribe to sync records*/
           } else {
             console.log("dingo ms not inited yet", ms);
+          }
+        }),
+        DatastoreState.subscribe(async (schema) => {
+          console.log("dingo currRecords added to store subscribe?", schema);
+          if (schema["events"]) {
+            localizedMessages = await select(query);
+            console.log("dingo got subscribe for events?", schema["events"], localizedMessages);
           }
         })
       );

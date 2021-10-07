@@ -20,8 +20,6 @@
   },
   "scripts": {
     "start": "node --experimental-modules ./lib/central-park.mjs",
-    "client": "rollup -c -w",
-    "build": "rollup -c",
     "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "bugs": {

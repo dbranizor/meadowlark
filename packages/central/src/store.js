@@ -11,8 +11,8 @@ export const writable = (initial_value = 0) => {
   
     const set = (new_value) => {
       console.log('dingo store Checking Value', new_value)
-      if (value === new_value) {
-        console.log('dingo store  Value same returning', new_value, value)
+      if (JSON.stringify(value) === JSON.stringify(new_value)) {
+        console.log('dingo currRecords added to store same value NOT', new_value, value)
         return;
       }         // same value, exit
       value = new_value                       // update value

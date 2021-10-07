@@ -143,14 +143,20 @@ async function sync(initialMessages = [], since = null) {
       return acc;
     }, {});
     let records = [];
+    /**Ugly Sync Code  */
     Object.keys(groups).reduce(async (acc, curr) => {
       let prevAcc = await acc;
+      console.log('dingo currrecords', groups)
       let currRecords = await receiveMessages(groups[curr]);
-      currRecords.forEach((rec) => {
-        console.log("dingo adding record to internal memory store");
-        DatastoreState.addRecord(curr, rec);
-      });
+      console.log('dingo currRecords Received', currRecords)
+      if(currRecords.results && currRecords.results.length){
+        /**Check to see if record exists */
+        currRecords.results.forEach(r => DatastoreState.addRecord(curr, r));
+
+      }
+
     }, Promise.resolve());
+    /**End of ugly sync code */
   }
 
   let diffTime = merkle.diff(result.merkle, getClock().merkle);

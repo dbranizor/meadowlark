@@ -1,4 +1,5 @@
 import { writable, bootstrap, sync, insert } from "@meadowlark-labs/central";
+
 const messageSchema = {
   events: {
     id: "TEXT",

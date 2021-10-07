@@ -10,14 +10,38 @@ const InitDataStore = () => {
           []
         );
         console.log("Creating Stores", storeNames);
-        storeNames.map((st) => update((sch) => (sch[st] = [])));
+        storeNames.map((st) =>
+          update((sch) => {
+            sch[st] = [];
+            console.log("dingo updating schema single", sch);
+            return sch;
+          })
+        );
       } else {
-        update((sch) => (sch[schema] = []));
+        update((sch) => {
+          sch[schema] = [];
+          console.log("dingo updating schema single", sch);
+          return sch;
+        });
       }
     },
     addRecord(store, record) {
-      update((sch) => {
-        sch[store] = [...sch[store], record];
+      return update((sch) => {
+        console.log(
+          "dingo currRecords added to store same value",
+          Object.assign(
+            { ...sch },
+            {
+              [store]: [...sch[store], record],
+            }
+          )
+        );
+        return Object.assign(
+          { ...sch },
+          {
+            [store]: [...sch[store], record],
+          }
+        );
       });
     },
   };
