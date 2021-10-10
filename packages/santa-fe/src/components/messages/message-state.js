@@ -1,4 +1,4 @@
-import { writable, bootstrap, sync, insert } from "@meadowlark-labs/central";
+import { writable, bootstrap, insert } from "@meadowlark-labs/central";
 
 const messageSchema = {
   events: {

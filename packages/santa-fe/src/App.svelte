@@ -2,7 +2,7 @@
 
 <script>
   import { onMount } from "svelte";
-
+  import TestTables from './TestTables.svelte'
   import {
     insert,
     start,
@@ -14,6 +14,7 @@
   import Messages from "./components/messages/Messages.svelte";
   import MessageStore from "./components/messages/message-state";
   import { localized } from "./bootup.js";
+
   start();
   const schema = {
     events: {
@@ -119,7 +120,7 @@
     /**Test dingo code*/
     displayedEvents = [...events];
 
-    await localized("Message");
+    await localized("Message", "Table");
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
@@ -180,6 +181,7 @@
       </div>
     </div>
     <Messages />
+    <TestTables />
   </div>
 </main>
 

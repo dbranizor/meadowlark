@@ -1,7 +1,9 @@
 import Message from "./components/messages/message-state.js";
+import Table from "./components/tables/table-state.js";
 import { DatastoreState } from "@meadowlark-labs/central";
 const MessageCatalog = {
   Message,
+  Table,
 };
 const localized = async function (components) {
   return new Promise(async (res, rej) => {
