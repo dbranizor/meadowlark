@@ -15,33 +15,18 @@ const TableSchema = {
 };
 
 const InitTableState = function () {
-  const {} = writable({
-    tables: [],
-  });
+  const { set, update, subscribe } = writable({});
 
   const SyncReady = writable(false);
   const methods = {
-    init: async function (scema) {
+    init: async function (schema) {
       console.log("dingo table state running update", schema);
-      await bootstrap(TableSchema);
-      console.log("dingo message state ran update");
+      await bootstrap(schema);
+      console.log("dingo TABLE state ran update", schema);
       return SyncReady.update((sync) => {
-        console.log("dingo messate state sync being set", sync);
+        console.log("dingo TABLE state sync being set", sync);
         return true;
       });
-    },
-    addTable: async function ({ name, coi, columns, id }) {
-      let tableColumns = [];
-     const cols = await insert("table", { name, coi });
-      columns.forEach(async (col, ix) => {
-        const column = await insert("column", {
-          name: col.name,
-          order: ix,
-          table_id: id,
-        });
-        tableColumns = [...tableColumns, column]
-      });
-    
     },
   };
 

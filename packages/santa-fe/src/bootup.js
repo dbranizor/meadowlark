@@ -9,9 +9,15 @@ const localized = async function (components) {
   return new Promise(async (res, rej) => {
     const args = Array.prototype.slice.call(arguments);
     await args.reduce(async (acc, curr) => {
-      const prev = await acc;
-      console.log("dingo localized called", curr);
-      await MessageCatalog[curr].init();
+      let prev = await acc;
+      if (Array.isArray(curr)) {
+        const component = curr[0];
+        const argument = curr[1];
+        await MessageCatalog[component].init(argument);
+      } else {
+        console.log("dingo localized called", curr);
+        await MessageCatalog[curr].init();
+      }
       return prev;
     }, Promise.resolve());
     res();

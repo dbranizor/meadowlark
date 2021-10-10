@@ -57,7 +57,7 @@ async function init(schema = false) {
   }
 
   ready = await _init();
-  console.log("dingo building tables");
+  console.log("dingo building tables", sqlMessages);
   run(sqlMessages);
   return self.postMessage({ type: "initialized_database" });
 }

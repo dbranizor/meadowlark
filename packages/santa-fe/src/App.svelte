@@ -120,7 +120,7 @@
     /**Test dingo code*/
     displayedEvents = [...events];
 
-    await localized("Message", "Table");
+    // await localized("Message");
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
