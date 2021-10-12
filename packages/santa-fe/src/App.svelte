@@ -2,17 +2,13 @@
 
 <script>
   import { onMount } from "svelte";
-  import TestTables from './TestTables.svelte'
   import {
-    insert,
     start,
     setEnvironment,
-    sync,
   } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
-  import MessageStore from "./components/messages/message-state";
   import { localized } from "./bootup.js";
 
   start();
@@ -84,14 +80,13 @@
     if (e.code === "Enter") {
       console.log("dingo adding new message");
       const event = { cat: newType, msg: newMessage };
-      MessageStore.insert(event);
-      displayedEvents = [...displayedEvents, { cat: newType, msg: newMessage }];
+      displayedEvents = [...displayedEvents, event];
     }
   };
 
   function handleEnableSync(event) {
     console.log("Got Call to Enable Sync", event);
-    sync();
+    // sync();
     // const isOffline = !centralConfig.isOffline;
     // const syncDisabled = !centralConfig.syncDisabled;
     // console.log(
@@ -120,7 +115,7 @@
     /**Test dingo code*/
     displayedEvents = [...events];
 
-    // await localized("Message");
+    await localized("Message");
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
@@ -180,8 +175,8 @@
         />
       </div>
     </div>
-    <Messages />
-    <TestTables />
+    <Messages messages={displayedEvents} />
+    <!-- <TestTables /> -->
   </div>
 </main>
 

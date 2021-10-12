@@ -224,25 +224,20 @@ const insert = async (table, row) => {
   ];
 
   console.log("dingo calling apply on new messages", messages);
-  let records;
-  try {
-    records = await apply(messages);
-  } catch (error) {
-    throw new error(`Error: ${error}`);
-  }
 
-  try {
-    sync(messages);
-  } catch (error) {
-    throw new Error(`Error: ${error}`);
-  }
+  sendMessages(messages);
 
-  return records;
+  return id;
   // console.log("dingo object", messages);
   // messages.forEach((m) => {
   // const sql = `INSERT INTO messages (dataset, row, column, value, timestamp) VALUES ('${m.dataset}', '${m.row}', '${m.column}', '${m.value}', '${m.timestamp}')`;
   // window.worker.postMessage({ type: "db-run", sql });
   // });
 };
+
+const sendMessages = (messages) => {
+    apply(messages);
+    sync(messages)
+}
 
 export { sync, buildSchema, insert, apply, receiveMessages };

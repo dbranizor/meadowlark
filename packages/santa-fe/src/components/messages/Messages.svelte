@@ -1,51 +1,26 @@
 <script>
-  import { select, DatastoreState } from "@meadowlark-labs/central";
+
   import Message from "./Message.svelte";
-  import { MessageCatalog } from "../../bootup.js";
   import { onDestroy, onMount } from "svelte";
-  import MessageState from "./message-state";
+  import MessageViewModel from "./MessageViewModel.js";
 
-  export let standardMessages = [];
+  export let messages = [];
 
-  let localizedMessages = [];
+  let displayedMessages = [];
   let isLocalized = true;
   let unsubscribes = [];
+  let messageViewModel = new MessageViewModel();
 
-  let syncReady = false;
   let query = `SELECT * FROM events WHERE tombstone <> 1`;
-  let syncedRecords = [];
-  $: displayedMessages = isLocalized ? localizedMessages : standardMessages;
 
+  $: if (messages && messages.length) {
+    console.log("dingo adding messages");
+    messageViewModel.addBatch(messages);
+  }
   onMount(async () => {
-    if (MessageCatalog.hasOwnProperty("Message")) {
-      unsubscribes.push(
-        MessageState.messages.subscribe(async (m) => {
-          localizedMessages = m;
-        }),
-        /**TODO: Move this into message-state.*/
-        MessageState.ready.subscribe(async (ms) => {
-          console.log("dingo message state has event update", ms);
-          if (ms) {
-            isLocalized = true;
-            console.log("dingo got records pre", localizedMessages);
-            localizedMessages = await select(query);
-            console.log("dingo got records post", localizedMessages);
-            /**Subscribe to sync records*/
-          } else {
-            console.log("dingo ms not inited yet", ms);
-          }
-        }),
-        DatastoreState.subscribe(async (schema) => {
-          console.log("dingo currRecords added to store subscribe?", schema);
-          if (schema["events"]) {
-            localizedMessages = await select(query);
-            console.log("dingo got subscribe for events?", schema["events"], localizedMessages);
-          }
-        })
-      );
-    } else {
-      console.log("dingo Messages Are Not Localized");
-    }
+    unsubscribes.push(
+      messageViewModel.messages.subscribe((ml) => (displayedMessages = ml))
+    );
   });
   onDestroy(() => {
     unsubscribes.forEach((u) => u());
