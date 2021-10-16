@@ -1,25 +1,35 @@
 <script>
-
   import Message from "./Message.svelte";
   import { onDestroy, onMount } from "svelte";
   import MessageViewModel from "./MessageViewModel.js";
 
   export let messages = [];
+  let applliedMessages = [];
 
   let displayedMessages = [];
   let isLocalized = true;
   let unsubscribes = [];
-  let messageViewModel = new MessageViewModel();
 
+  let keys = {};
   let query = `SELECT * FROM events WHERE tombstone <> 1`;
 
   $: if (messages && messages.length) {
+    applyMessages();
+  }
+
+  async function applyMessages() {
     console.log("dingo adding messages");
-    messageViewModel.addBatch(messages);
+    const n = messages.filter((e) => !applliedMessages.includes(e));
+    try {
+      await MessageViewModel.addBatch(n);
+    } catch (e) {
+      throw new Error(`Error: ${e}`);
+    }
+    applliedMessages = [...applliedMessages, ...n];
   }
   onMount(async () => {
     unsubscribes.push(
-      messageViewModel.messages.subscribe((ml) => (displayedMessages = ml))
+      MessageViewModel.subscribe((ml) => (displayedMessages = ml))
     );
   });
   onDestroy(() => {

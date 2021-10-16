@@ -239,7 +239,7 @@ app.get("/dev/status", (req, res) => {
 
 app.post("/sync", (req, res) => {
   let { group_id, client_id, messages, merkle: clientMerkle } = req.body;
-
+  console.log('dingo props', group_id, client_id, JSON.stringify(clientMerkle))
   let trie = addMessages(group_id, messages);
   console.log("dingo sync called");
   let newMessages = [];

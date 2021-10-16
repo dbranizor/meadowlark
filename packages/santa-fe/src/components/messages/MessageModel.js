@@ -13,6 +13,7 @@ const InitMessagesModel = function () {
 
   const methods = {
     insert: async function (message) {
+      console.log('dingo inserting via message model')
       const recordID = await insert("events", message);
       update((msg) => {
         if (recordID) {

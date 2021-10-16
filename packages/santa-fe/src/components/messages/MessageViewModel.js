@@ -1,45 +1,57 @@
 import { writable, bootstrap, insert, sync } from "@meadowlark-labs/central";
 import MessageModel from "./MessageModel.js";
-export class MessageViewModel {
-  constructor() {
-    this.unsubscribes.push(
-      this.syncReady$.subscribe((s) => (this.syncReady = s)),
-      MessageModel.subscribe((m) => this.messages.set(m))
-    );
-  }
-  unsubscribes = [];
-  messages = writable([]);
-  syncReady;
-  syncReady$ = writable(false);
 
-  async init() {
-    const messagesSchema = MessageModel.schema;
-    await bootstrap(messagesSchema);
-    this.syncReady$.update((sync) => {
-      MessageModel.refresh();
-      console.log("MessagesState Ready for Syncing");
-      return true;
-    });
-  }
-  async addBatch(messages) {
-    if (this.syncReady) {
-      messages.map((m) => {
-        this.add(m);
+const InitMessageViewModel = () => {
+  const { set, subscribe, update } = writable([]);
+  const syncReady$ = writable(false);
+  let syncReady = false;
+  const unsubscribes = [];
+  unsubscribes.push(MessageModel.subscribe(res => set(res)))
+  const methods = {
+    async init() {
+      const messagesSchema = MessageModel.schema;
+      await bootstrap(messagesSchema);
+      syncReady$.update((sync) => {
+        MessageModel.refresh();
+        console.log("MessagesState Ready for Syncing");
+        syncReady = true;
+        return true;
       });
+    },
+    async addBatch(messages) {
+      console.log('dingo is sync ready?', this.syncReady)
+      if (syncReady) {
+        console.log('dingo starting message message apply')
+        await messages.reduce(async (acc, curr) => {
+          const prevAcc = await acc;
+          await this.add(curr);
+          return prevAcc;
+        }, Promise.resolve())
+        console.log('dingo ending message apply')
+      }
+    },
+    async add(message) {
+      if (syncReady) {
+        await MessageModel.insert(message);
+      } else {
+        console.error("Error Adding Message. Sync Not Ready", this.syncReady);
+      }
+    },
+    unsubscribe() {
+      unsubscribes.forEach((f) => f());
     }
+
   }
 
-  add(message) {
-    if (this.syncReady) {
-      MessageModel.insert(message);
-    } else {
-      console.error("Error Adding Message. Sync Not Ready", this.syncReady);
-    }
+  return {
+    ...methods,
+    set,
+    update,
+    subscribe
   }
 
-  unsubscribe() {
-    this.unsubscribes.forEach((f) => f());
-  }
 }
 
-export default MessageViewModel;
+const messageViewModel = InitMessageViewModel();
+
+export default messageViewModel;

@@ -2,10 +2,7 @@
 
 <script>
   import { onMount } from "svelte";
-  import {
-    start,
-    setEnvironment,
-  } from "@meadowlark-labs/central";
+  import { start, setEnvironment } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
@@ -30,16 +27,7 @@
       user: "text",
     },
   };
-  let events = [
-    {
-      cat: "test",
-      msg: "This is just a test",
-    },
-    {
-      cat: "email",
-      msg: "Check your emails",
-    },
-  ];
+  let events = [];
   let displayedEvents = [];
   let newType = "";
   let newMessage = "";
