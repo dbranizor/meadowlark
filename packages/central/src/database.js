@@ -5,7 +5,8 @@ import * as merkle from "./merkle.js";
 import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
 import { workerService, getWorker } from "./datastores.js";
-import DatastoreState from "./datastore-state";
+import DatastoreState from "./datastore-state.js";
+import MessageBus from "./message-bus.js";
 
 let environment = {};
 let messages = [];
@@ -146,15 +147,13 @@ async function sync(initialMessages = [], since = null) {
     /**Ugly Sync Code  */
     Object.keys(groups).reduce(async (acc, curr) => {
       let prevAcc = await acc;
-      console.log('dingo currrecords', groups)
+      console.log("dingo currrecords", groups);
       let currRecords = await receiveMessages(groups[curr]);
-      console.log('dingo currRecords Received', currRecords)
-      if(currRecords.results && currRecords.results.length){
+      console.log("dingo currRecords Received", currRecords);
+      if (currRecords.results && currRecords.results.length) {
         /**Check to see if record exists */
-        currRecords.results.forEach(r => DatastoreState.addRecord(curr, r));
-
+        currRecords.results.forEach((r) => DatastoreState.addRecord(curr, r));
       }
-
     }, Promise.resolve());
     /**End of ugly sync code */
   }
@@ -173,7 +172,31 @@ async function sync(initialMessages = [], since = null) {
     console.log("dingo returning");
     return sync([], diffTime);
   } else {
-    console.log("dingo sync good not re-running");
+    console.log("dingo sync good not re-running. PUBLISHING EVENT refresh");
+    if (result && result.messages && result.messages.length) {
+      const grouped = result.messages.reduce((acc, curr) => {
+        console.log("refresh curr", curr.dataset);
+        if (!acc[curr.dataset] && curr.dataset) {
+          console.log("refresh curr dataset", curr.dataset);
+          acc[curr.dataset] = true;
+        }
+        return acc;
+      }, {});
+      console.log(
+        "Recieved Applied Updates From Server!!! Publishing Refresh Message",
+        Object.keys(grouped)
+      );
+      Object.keys(grouped).forEach((type) =>{
+
+        const msg = {
+          message: "REFRESH",
+          payload: type,
+        };
+        console.log('dingo publishing refresh message!!!', msg);
+        MessageBus.publish(msg)
+      });
+    }
+
     return;
   }
 }
@@ -236,8 +259,8 @@ const insert = async (table, row) => {
 };
 
 const sendMessages = (messages) => {
-    apply(messages);
-    sync(messages)
-}
+  apply(messages);
+  sync(messages);
+};
 
 export { sync, buildSchema, insert, apply, receiveMessages };

@@ -2,7 +2,7 @@
 
 <script>
   import { onMount } from "svelte";
-  import { start, setEnvironment } from "@meadowlark-labs/central";
+  import { start, setEnvironment, sync } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
   import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
@@ -66,9 +66,13 @@
   }
   const handleNewMessage = (e) => {
     if (e.code === "Enter") {
-      console.log("dingo adding new message");
-      const event = { cat: newType, msg: newMessage };
-      displayedEvents = [...displayedEvents, event];
+      if (newMessage) {
+        console.log("dingo adding new message");
+        const event = { cat: newType, msg: newMessage };
+        displayedEvents = [...displayedEvents, event];
+      } else {
+        sync();
+      }
     }
   };
 
@@ -163,7 +167,10 @@
         />
       </div>
     </div>
-    <Messages messages={displayedEvents} />
+    <Messages
+      on:MESSAGES_APPLIED={() => (newMessage = "")}
+      messages={displayedEvents}
+    />
     <!-- <TestTables /> -->
   </div>
 </main>

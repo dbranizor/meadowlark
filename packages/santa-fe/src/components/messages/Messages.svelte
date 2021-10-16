@@ -1,9 +1,10 @@
 <script>
   import Message from "./Message.svelte";
-  import { onDestroy, onMount } from "svelte";
+  import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import MessageViewModel from "./MessageViewModel.js";
 
   export let messages = [];
+  const dispatch = createEventDispatcher();
   let applliedMessages = [];
 
   let displayedMessages = [];
@@ -26,6 +27,7 @@
       throw new Error(`Error: ${e}`);
     }
     applliedMessages = [...applliedMessages, ...n];
+    dispatch("MESSAGES_APPLIED", applliedMessages);
   }
   onMount(async () => {
     unsubscribes.push(

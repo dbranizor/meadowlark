@@ -1,4 +1,10 @@
-import { writable, bootstrap, insert, sync } from "@meadowlark-labs/central";
+import {
+  writable,
+  MessageBus,
+  bootstrap,
+  insert,
+  sync,
+} from "@meadowlark-labs/central";
 import MessageModel from "./MessageModel.js";
 
 const InitMessageViewModel = () => {
@@ -6,7 +12,18 @@ const InitMessageViewModel = () => {
   const syncReady$ = writable(false);
   let syncReady = false;
   const unsubscribes = [];
-  unsubscribes.push(MessageModel.subscribe(res => set(res)))
+  unsubscribes.push(
+    MessageModel.subscribe((res) => set(res)),
+    MessageBus.subscribe(async (msg) => {
+      if ((msg.message = "REFRESH" && msg.payload === "events")) {
+        console.log("caught refresh. refresshing", msg);
+        await MessageModel.refresh();
+        console.log("Refreshed MessageModel");
+      } else {
+        console.log("not refreshing", msg);
+      }
+    })
+  );
   const methods = {
     async init() {
       const messagesSchema = MessageModel.schema;
@@ -19,16 +36,19 @@ const InitMessageViewModel = () => {
       });
     },
     async addBatch(messages) {
-      console.log('dingo is sync ready?', this.syncReady)
+      console.log("dingo is sync ready?", this.syncReady);
       if (syncReady) {
-        console.log('dingo starting message message apply')
+        console.log("dingo starting message message apply");
         await messages.reduce(async (acc, curr) => {
           const prevAcc = await acc;
           await this.add(curr);
           return prevAcc;
-        }, Promise.resolve())
-        console.log('dingo ending message apply')
+        }, Promise.resolve());
+        console.log("dingo ending message apply");
       }
+    },
+    async sync() {
+      sync();
     },
     async add(message) {
       if (syncReady) {
@@ -39,18 +59,16 @@ const InitMessageViewModel = () => {
     },
     unsubscribe() {
       unsubscribes.forEach((f) => f());
-    }
-
-  }
+    },
+  };
 
   return {
     ...methods,
     set,
     update,
-    subscribe
-  }
-
-}
+    subscribe,
+  };
+};
 
 const messageViewModel = InitMessageViewModel();
 

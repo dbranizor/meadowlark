@@ -23,6 +23,7 @@ const InitMessagesModel = function () {
       });
     },
     refresh: async function () {
+      console.log("Dingo getting localized Messages");
       const localizedMessages = await select('SELECT * FROM events WHERE tombstone <> 1');
       console.log("Dingo got localized Messages", localizedMessages);
       set(localizedMessages);

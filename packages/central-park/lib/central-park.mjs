@@ -246,6 +246,7 @@ app.post("/sync", (req, res) => {
   if (clientMerkle) {
     console.log("dingo clientMerkle");
     let diffTime = merkle.diff(trie, clientMerkle);
+    console.log('dingo have diff time', diffTime);
     if (diffTime) {
       let timestamp = new Timestamp(diffTime, 0, "0").toString();
       newMessages = queryAll(
