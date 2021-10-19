@@ -259,13 +259,15 @@ async function handleCompare(messages) {
   const columns = buildINClause(messages.map((m) => m.column));
 
   const SQL = `SELECT * FROM messages where dataset IN(${datasets}) AND ROW IN(${rows}) AND COLUMN IN(${columns})`;
-
+  console.log('dingo compare 10-19-0530', SQL);
   try {
     results = db.exec(SQL);
   } catch (error) {
     throw new Error(`ERROR: ${error}`);
   }
+
   results = rowMapper(results);
+  console.log('dingo compare results 10-19-0530', results);
   self.postMessage({ type: "existing-messages", results });
   function buildINClause(data = []) {
     return data
