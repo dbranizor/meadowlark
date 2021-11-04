@@ -6,7 +6,7 @@ const InitMessagesModel = function () {
       id: "TEXT",
       cat: "TEXT",
       msg: "TEXT",
-      coi: "TEXT",
+      coi: "TEXT"
     },
   };
   const { set, subscribe, update } = writable([]);
@@ -24,9 +24,9 @@ const InitMessagesModel = function () {
     },
     refresh: async function () {
       console.log("Dingo getting localized Messages");
-      const localizedMessages = await select('SELECT * FROM events WHERE tombstone <> 1');
+      const localizedMessages = await select('SELECT * FROM events');
       console.log("Dingo got localized Messages", localizedMessages);
-      set(localizedMessages);
+      set(localizedMessages);``
     }
   };
 

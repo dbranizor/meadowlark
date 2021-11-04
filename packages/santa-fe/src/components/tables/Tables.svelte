@@ -2,7 +2,7 @@
   import { insert } from "@meadowlark-labs/central";
   import { onMount } from "svelte";
 
-  import { localized } from "../../bootup";
+  import { santaFe } from "../../bootup";
   import Table from "./Table.svelte";
   export let name = "table";
   export let columns = [];
@@ -27,7 +27,7 @@
     };
     console.log("dingo Localized Table Schema", tableSchema);
     const schema = { [name]: { ...tableSchema } };
-    return await localized(["Table", tableSchema]);
+    return await santaFe({localized: [["Table", tableSchema]]});
   };
 
   onMount(() => {

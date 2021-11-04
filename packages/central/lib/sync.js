@@ -3,14 +3,19 @@ import initSqlJs from "@jlongster/sql.js";
 import { SQLiteFS } from "absurd-sql";
 // import IndexedDBBackend from '../../indexeddb/backend';
 import IndexedDBBackend from "absurd-sql/dist/indexeddb-backend.js";
-import { buildSchema } from "@meadowlark-labs/central";
+import {
+  buildSchema,
+  Timestamp,
+  merkle,
+  deserializeValue,
+} from "@meadowlark-labs/central";
 
 // Various global state for the demo
 
 let currentBackendType = "idb";
 let cacheSize = 5000;
 let pageSize = 8192;
-let dbName = `fts.sqlite`;
+let dbName = `meadowlark.sqlite`;
 
 let fakeValue = 0;
 
@@ -23,13 +28,19 @@ let SQL = null;
 let ready = null;
 
 const sqlMessages = `CREATE TABLE if not exists messages
-  (timestamp TEXT,
+  (
+   id TEXT,
+   timestamp TEXT,
    group_id TEXT,
    dataset TEXT,
    row TEXT,
    column TEXT,
    value TEXT,
-   PRIMARY KEY(timestamp, group_id))`;
+   PRIMARY KEY(timestamp, row, column))`;
+
+const sqlMessageMerkles = `CREATE TABLE if not exists messages_merkles
+   (group_id TEXT PRIMARY KEY,
+    merkle TEXT);`;
 
 async function _init() {
   console.log("dingo setting up db");
@@ -44,7 +55,7 @@ async function _init() {
 }
 
 async function init(schema = false) {
-  console.log('dingo called init', schema, ready)
+  console.log("dingo called init", schema, ready);
   if (ready && schema) {
     await handleSchema(schema);
     self.postMessage({ type: "initialized_database" });
@@ -59,6 +70,7 @@ async function init(schema = false) {
   ready = await _init();
   console.log("dingo building tables", sqlMessages);
   run(sqlMessages);
+  run(sqlMessageMerkles);
   return self.postMessage({ type: "initialized_database" });
 }
 
@@ -232,54 +244,126 @@ const rowMapper = (result) => {
     : [];
 };
 
-async function get(statement, post = true) {
-  let db = await getDatabase();
-  let result;
-  console.log("dingo running SQL GET DAO: ", statement);
-  try {
-    result = db.exec(statement);
-  } catch (error) {
-    console.error(`error: ${error}`);
+function buildPreparedStatement(query, fields = []) {
+  if (!fields || !fields.length) {
+    return query;
   }
-  console.log("dingo SQL GET DAO get results: ", result);
-
-  const resturnData = rowMapper(result);
-  console.log("dingo SQL GET DAO get results mapped: ", resturnData);
-  post ? self.postMessage({ type: "results", results: resturnData }) : post;
-  return resturnData;
+  /** Query starts as select * from something WHERE ? */
+  const nq = fields.reduce((acc, curr) => {
+    let accQuery = acc.replace("?", curr);
+    return accQuery;
+  }, query);
+  return nq;
 }
 
-async function handleCompare(messages) {
+export function queryAll(db, sql, params = {}) {
+  let q = buildPreparedStatement(sql, Object.keys(params));
+  let stmt = db.prepare(q);
+  stmt.bind({ ...params });
+  let rows = [];
+  while (stmt.step()) {
+    rows = [...rows, stmt.getAsObject()];
+  }
+  console.log("Here is a queryAll rows: " + JSON.stringify(rows));
+  return rows;
+}
+
+export function queryObj(db, sql, params = {}) {
+  const s = buildPreparedStatement(sql, Object.keys(params));
+  let stmt = db.prepare(s);
+  return stmt.getAsObject(params);
+}
+
+export function getMerkle(db, group_id) {
+  let obj = queryObj(db, "SELECT * FROM messages_merkles WHERE group_id = ?", {
+    $group_id: group_id,
+  });
+
+  if (obj.merkle) {
+    return JSON.parse(obj.merkle);
+  } else {
+    return {};
+  }
+}
+
+function queryRun(db, sql, params = {}) {
+  let stmt = db.prepare(sql);
+  return stmt.run(params);
+}
+
+async function handleInsertMessages(group_id, messages) {
+  // get trie
+  
   const db = await getDatabase();
+  let trie =  getMerkle(db, group_id);
+  queryRun(db, "BEGIN");
 
-  let results;
-
-  const datasets = buildINClause(messages.map((m) => m.dataset));
-  const rows = buildINClause(messages.map((m) => m.row));
-  const columns = buildINClause(messages.map((m) => m.column));
-
-  const SQL = `SELECT * FROM messages where dataset IN(${datasets}) AND ROW IN(${rows}) AND COLUMN IN(${columns})`;
-  console.log('dingo compare 10-19-0530', SQL);
   try {
-    results = db.exec(SQL);
+    for (let message of messages) {
+      const s =
+        `INSERT OR IGNORE INTO messages(timestamp, group_id, dataset, row, column, value)` +
+        `values(?, ?, ?, ?, ?, ?);`;
+      const params = {
+        $timestamp: message.timestamp,
+        $group_id: group_id,
+        $dataset: message.dataset,
+        $row: message.row,
+        $column: message.column,
+        $value: message.value,
+      };
+      const bs = buildPreparedStatement(s, Object.keys(params));
+      const ps = db.prepare(bs);
+      const result = ps.run(params);
+      // TODO: Debug this so that I can check that result === 1
+      if (result) {
+        console.log("INSERTING MESSAGE INTO MERKLE");
+        trie = merkle.insert(trie, Timestamp.parse(message.timestamp));
+      }
+
+    }
+
+    const mp = {
+      $group_id: group_id,
+      $merkle: JSON.stringify(trie),
+    };
+
+    const ms = buildPreparedStatement(
+      `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`,
+      mp
+    );
+
+    // update merkle tree table row
+    queryRun(db, ms, mp);
+    queryRun(db, "COMMIT");
   } catch (error) {
-    throw new Error(`ERROR: ${error}`);
+    queryRun(db, "ROLLBACK");
+    throw error;
   }
 
-  results = rowMapper(results);
-  console.log('dingo compare results 10-19-0530', results);
-  self.postMessage({ type: "existing-messages", results });
-  function buildINClause(data = []) {
-    return data
-      .map((d) => `'${d}'`)
-      .reduce((acc, curr) => {
-        if (acc.some((a) => a === curr)) {
-          return acc;
-        }
-        return [...acc, curr];
-      }, [])
-      .join(",");
-  }
+
+  self.postMessage({ type: "INSERT_MESSAGE", results: JSON.stringify(trie) });
+}
+
+async function handleGetMostRecent(message) {
+  const db = await getDatabase();
+  // let results;
+
+  // const s = `SELECT * FROM messages WHERE dataset = '${message.dataset}' AND row = '${message.row}' AND column = '${message.column}' ORDER BY timestamp;`;
+  // try {
+  //   console.log("dingo this is the database in browser", db);
+  //   results = db.exec(s);
+  // } catch (error) {
+  //   throw new Error(`ERROR: ${error}`);
+  // }
+  // results = rowMapper(results);
+
+  const result = queryObj(
+    db,
+    `SELECT * FROM messages WHERE dataset = ? AND row = ? AND column = ? ORDER BY timestamp DESC;`,
+    { $message: message.dataset, $row: message.row, $column: message.column }
+  );
+  const record = !result.column ? false : result;
+  self.postMessage({ type: "MOST_RECENT_LOCAL_MESSAGES", results: record });
 }
 
 async function handleSchema(schema = {}) {
@@ -293,6 +377,55 @@ async function handleSchema(schema = {}) {
       return;
     })
   );
+}
+
+async function handleApply(message) {
+  const sql = `SELECT * from ${message.dataset} where id = '${message.row}';`;
+  const params = {
+    $dataset: message.dataset,
+    $row: message.row,
+  };
+  const db = await getDatabase();
+  const record = queryObj(
+    db,
+    `SELECT * FROM ${message.dataset} WHERE id = '${message.row}'`
+  );
+  console.log("dingo handle apply?", message);
+
+  console.log("upserting message to tables", message);
+  if (!record.id) {
+    // const s = `INSERT INTO ${message.dataset}(id, ${message.column}) VALUES ('${message.row}', '${message.value}');`;
+    const insertParams = {
+      $dataset: message.dataset,
+      $column: message.column,
+      $row: message.row,
+      $value: deserializeValue(message.value),
+    };
+    queryRun(
+      db,
+      `INSERT INTO ${insertParams.$dataset}(id, ${insertParams.$column}) VALUES ('${insertParams.$row}', '${insertParams.$value}');`
+    );
+    console.log("dingo apply sql", sql);
+  } else {
+    try {
+      // const sql = `UPDATE ${message.dataset} SET ${message.column} = '${message.value}' WHERE id = '${message.row}' `;
+      const updateParams = {
+        $dataset: message.dataset,
+        $column: message.column,
+        $value: deserializeValue(message.value),
+        $row: message.row,
+      };
+      queryRun(
+        db,
+        `UPDATE ${updateParams.$dataset} SET ${updateParams.$column} = '${updateParams.$value}' WHERE id = '${updateParams.$row}'`
+      );
+      console.log("dingo update sql", sql);
+    } catch (error) {
+      throw new Error(`Error: `, error);
+    }
+  }
+
+  self.postMessage({ type: "APPLIED" });
 }
 
 async function handleApplies(messages = []) {
@@ -342,12 +475,16 @@ let methods = {
 
 if (typeof self !== "undefined") {
   self.onmessage = async (msg) => {
+    let db;
     switch (msg.data.type) {
       case "search":
         search(msg.data.name);
         break;
       case "db-run":
         run(msg.data.sql);
+        break;
+      case "RUN_APPLY":
+        handleApply(msg.data.message);
         break;
       case "db-apply":
         try {
@@ -361,22 +498,46 @@ if (typeof self !== "undefined") {
         console.log("dingo gotz results", results);
         self.postMessage({ type: "applied-messages", results });
         break;
-      case "db-compare-messages":
-        handleCompare(msg.data.messages);
+      case "GET_MOST_RECENT_LOCAL_MESSAGES":
+        handleGetMostRecent(msg.data.message);
+        break;
+      case "RUN_INSERT_MESSAGES":
+
+        handleInsertMessages(msg.data.group_id, msg.data.message);
+        break;
+      case "GET_MERKLE":
+        console.log("Getting Merkle", msg.data.group_id);
+        if(!db){
+          db = await getDatabase()
+        }
+        let trie = await getMerkle(db, msg.data.group_id);
+        self.postMessage({ type: "MERKLE", results: trie });
         break;
       case "db-get-messages":
         get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC");
         break;
-      case "db-get":
-        get(msg.data.sql);
+      case "SELECT_ALL":
+        db = await getDatabase();
+        const selectResults = queryAll(db, msg.data.sql);
+        self.postMessage({ type: "SELECT", results: selectResults });
         break;
       case "db-init":
+        break;
+      case "db-sorted-messages":
+        db = await getDatabase();
+        console.log("DINGO SORTING IN SORT DB THREAD");
+        const sortedMessages = queryAll(
+          db,
+          `SELECT * FROM messages ORDER BY timestamp DESC`
+        );
+        console.log("dingo got results!!!", sortedMessages);
+        self.postMessage({ type: "sorted-messages", sortedMessages });
         break;
       case "ui-invoke":
         if (methods[msg.data.name] == null) {
           throw new Error("Unknown method: " + msg.data.name);
         }
-        console.log('dingo running ui-invoke', msg.data)
+        console.log("dingo running ui-invoke", msg.data);
         if (msg.data.arguments) {
           methods[msg.data.name](msg.data.arguments);
         } else {

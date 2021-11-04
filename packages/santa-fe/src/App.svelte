@@ -2,13 +2,12 @@
 
 <script>
   import { onMount } from "svelte";
-  import { start, setEnvironment, sync } from "@meadowlark-labs/central";
+  import { sync } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
-  import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
-  import { localized } from "./bootup.js";
+  import { santaFe } from "./bootup.js";
 
-  start();
+  //start();
   const schema = {
     events: {
       id: "TEXT",
@@ -40,23 +39,21 @@
     { id: "John", display: "John" },
     { id: "George", display: "George" },
     { id: "Paul", display: "Paul" },
-    { id: "Ringo", display: "Ringo" },
+    { id: "Ringo", display: "Rifngo" },
   ];
 
   let selectedUser = testUsers[1].display;
   let centralConfig = {
     user_id: selectedUser,
-    syncDisabled: false,
-    syncUrl: "https://localhost/central-park",
+    sync_disabled: false,
+    sync_url: "https://localhost/central-park",
     group_id: "meadowlark",
     debug: true,
+    localized: ["Message"],
     isOffline: true,
   };
-  EnvironmentState.subscribe((e) => {
-    console.log("dingo got environment sub update", e);
-    centralConfig = Object.assign(centralConfig, e);
-  });
-  setEnvironment(centralConfig);
+
+  // setEnvironment(centralConfig);
 
   export let name;
 
@@ -64,7 +61,7 @@
     if (newType) {
     }
   }
-  const handleNewMessage = (e) => {
+  const handleNewMessage = async (e) => {
     if (e.code === "Enter") {
       if (newMessage) {
         console.log("dingo adding new message");
@@ -106,8 +103,7 @@
   onMount(async () => {
     /**Test dingo code*/
     displayedEvents = [...events];
-
-    await localized("Message");
+    santaFe(centralConfig);
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
@@ -147,7 +143,7 @@
     <div class="flex">
       <select
         bind:value={selectedUser}
-        on:change={() => setEnvironment(centralConfig)}
+        on:change={() => santaFe(centralConfig, false)}
       >
         {#each testUsers as user}
           <option value={user}>{user.display}</option>

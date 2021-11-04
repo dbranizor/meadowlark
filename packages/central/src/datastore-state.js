@@ -1,4 +1,4 @@
-import { writable } from "./store";
+import { writable } from "./store.js";
 const InitDataStore = () => {
   const { set, update, subscribe } = writable({});
 

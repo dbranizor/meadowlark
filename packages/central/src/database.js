@@ -1,12 +1,11 @@
 import { makeClientId } from "./Utilities.mjs";
-import { getClock } from "./clock.js";
+import { getClock, setClock } from "./clock.js";
 import { Timestamp } from "./timestamp.js";
 import * as merkle from "./merkle.js";
 import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
-import { workerService, getWorker } from "./datastores.js";
-import DatastoreState from "./datastore-state.js";
-import MessageBus from "./message-bus.js";
+import { getWorker } from "./datastores.js";
+import { EVENTS } from "./enum.js";
 
 let environment = {};
 let messages = [];
@@ -16,68 +15,65 @@ unsubscribes.push(
   MessageState.subscribe((m) => (messages = m))
 );
 
-const handleApplyMessages = (messages) => {
-  let clock = getClock();
-  getWorker();
-  const applies = [];
-  window.worker.postMessage({ type: "db-compare-messages", messages });
+const handleApplyMessage = async (message) => {
   return new Promise((res, rej) => {
-    console.log("dingo inside of handlecomparemessages promise", clock);
-    window.worker.onmessage = (e) => {
-      if (e.data.type === "existing-messages") {
-        const existingMessages = e.data.result || [];
-        messages.forEach((msg) => {
-          const existingMessage = existingMessages.find(
-            (e) =>
-              e.dataset === msg.dataset &&
-              e.row === msg.row &&
-              e.column === msg.column
-          );
-          if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
-            applies.push(msg);
-          }
-
-          if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
-            clock.merkle = merkle.insert(
-              clock.merkle,
-              Timestamp.parse(msg.timestamp)
-            );
-            MessageState.add(msg);
-          }
-        });
-        window.worker.postMessage({ type: "db-apply", messages: applies });
-        console.log("dingo existing messages", e.data);
+    getWorker();
+    console.log("dingo running apply ", message);
+    window.worker.postMessage({ type: EVENTS.RUN_APPLY, message });
+    window.worker.addEventListener("message", (e) => {
+      console.log("dingo GM", e);
+      if (e.data.type === EVENTS.APPLIED) {
+        res(true);
       }
-      if (e.data.type === "applied-messages") {
-        console.log("Messages Are Applied", e.data);
-        return res(e.data);
-      }
-    };
+    });
   });
 };
 
-const apply = async (locMessages = []) => {
+function serializeValue(value) {
+  if (value === null) {
+    return "0:";
+  } else if (typeof value === "number") {
+    return "N:" + value;
+  } else if (typeof value === "string") {
+    return "S:" + value;
+  }
+
+  throw new Error("Unserializable value type: " + JSON.stringify(value));
+}
+
+function deserializeValue(value) {
+  const type = value[0];
+  switch (type) {
+    case "0":
+      return null;
+    case "N":
+      return parseFloat(value.slice(2));
+    case "S":
+      return value.slice(2);
+  }
+
+  throw new Error("Invalid type key for value: " + value);
+}
+
+// 121
+/**
+ * Apply the data operation contained in a message to our local data store
+ * (i.e., set a new property value for a secified dataset/table/row/column).
+ */
+const apply = async (message) => {
   getWorker();
   if (!window.worker) {
     console.error("dingo no worker", worker, newSecret(), newSecret());
     throw new Error(`Error: No Worker`);
   }
-  console.log("dingo store database worker in apply", worker);
 
-  console.log("dingo ");
-  let records;
-  try {
-    records = await handleApplyMessages(locMessages);
-  } catch (error) {
-    throw new Error(`Error: `, error);
-  }
-
-  return records;
+  await handleApplyMessage(message);
+  return true;
 };
 
 async function post(data) {
   console.log("diongo running fetch", environment, environment.user_id);
-  let res = await fetch(`${environment.syncUrl}/sync`, {
+  let res = await fetch(`${environment.sync_url}/sync`, {
     method: "POST",
     mode: "cors",
     credentials: "same-origin",
@@ -97,25 +93,165 @@ async function post(data) {
   }
   return res.data;
 }
-function receiveMessages(messages = []) {
+
+function getMatchingLocalMessage(message) {
+  getWorker();
+  return new Promise((res, rej) => {
+    window.worker.postMessage({
+      type: EVENTS.GET_MOST_RECENT_LOCAL_MESSAGES,
+      message,
+    });
+    window.worker.addEventListener("message", (e) => {
+      if (e.data.type === EVENTS.MOST_RECENT_LOCAL_MESSAGES) {
+        console.log("DINGO!!!!!!!MATCHINGLOCALMESSAGE!!!", e, e.data);
+        return res(e.data.results);
+      }
+    });
+  });
+}
+
+async function mapIncomingToLocalMessagesForField(incomingMessages) {
+  const incomingFieldMsgToLocalFieldMsgMap = await incomingMessages.reduce(
+    async (acc, curr) => {
+      const map = await acc;
+
+      // Attempt to find the most recent local message for the same field as the
+      // current incoming message (note that find() can return `undefined` if no
+      // match is found).
+      const mostRecentLocalMsg = await getMatchingLocalMessage(curr);
+      // Note that the incoming message OBJECT is being used as a key here
+      // (something you couldn't do if an Object were used insteaad of a Map)
+      map.set(curr, mostRecentLocalMsg);
+      return map;
+    },
+    Promise.resolve(new Map())
+  );
+
+  return incomingFieldMsgToLocalFieldMsgMap;
+}
+
+async function handleInsertMessages(message) {
+  return new Promise((res, rej) => {
+    window.worker.postMessage({
+      type: EVENTS.RUN_INSERT_MESSAGES,
+      message,
+      group_id: environment.group_id,
+    });
+    window.worker.addEventListener("message", (e) => {
+      console.log("dingo GM", e);
+      if (e.data.type === EVENTS.INSERT_MESSAGE) {
+        return res(true);
+      }
+    });
+  });
+}
+
+let _apply;
+function registerApply(callback) {
+  _apply = callback;
+}
+async function applyMessages(incomingMessages) {
+  let incomingToLocalMsgsForField = await mapIncomingToLocalMessagesForField(
+    incomingMessages
+  );
+  let clock = getClock();
+  let messages = [];
+  // Look at each incoming message. If it's new to us (i.e., we don't have it in
+  // our local store), or is newer than the message we have for the same field
+  // (i.e., dataset + row + column), then apply it to our local data store and
+  // insert it into our local collection of messages and merkle tree (which is
+  // basically a specialized index of those messages).
+  await incomingMessages.reduce(async (acc, incomingMsgForField) => {
+    const prevAcc = await acc;
+    // `incomingToLocalMsgsForField` is a Map instance, which means objects
+    // can be used as keys. If this is the first time we've encountered the
+    // message, then we won't have a _local_ version in the Map and `.get()`
+    // will return `undefined`.
+    let mostRecentLocalMsgForField =
+      incomingToLocalMsgsForField.get(incomingMsgForField);
+
+    // If there is no corresponding local message (i.e., this is a "new" /
+    // unknown incoming message), OR the incoming message is "newer" than the
+    // one we have, apply the incoming message to our local data store.
+    //
+    // Note that althought `.timestamp` references an object (i.e., an instance
+    // of Timestamp), the JS engine is going to implicitly call the instance's
+    // `.valueOf()` method when doing these comparisons. The Timestamp class has
+    // a custom implementation of valueOf() that retuns a string. So, in effect,
+    // comparing timestamps below is comparing the toString() value of the
+    // Timestamp objects.
+
+    console.log("dingo applying?");
+    if (
+      !mostRecentLocalMsgForField ||
+      mostRecentLocalMsgForField.timestamp < incomingMsgForField.timestamp
+    ) {
+      // `apply()` means that we're going to actually update our local data
+      // store with the operation contained in the message.
+      await apply(incomingMsgForField);
+    } else {
+      console.log(
+        "dingo not applying?",
+        mostRecentLocalMsgForField,
+        mostRecentLocalMsgForField,
+        incomingMsgForField
+      );
+    }
+
+    // If this is a new message that we don't have locally (i.e., we didn't find
+    // a corresponding local message for the same dataset/row/column OR we did
+    // but it has a different timestamp than ours), we need to add it to our
+    // axfrray of local messages and update the merkle tree.
+    if (
+      !mostRecentLocalMsgForField ||
+      mostRecentLocalMsgForField.timestamp !== incomingMsgForField.timestamp
+    ) {
+      clock.merkle = merkle.insert(
+        clock.merkle,
+        Timestamp.parse(incomingMsgForField.timestamp)
+      );
+
+      // Add the message to our collection...
+      // _messages.push(incomingMsgForField);
+      messages.push(incomingMsgForField);
+    }
+    return prevAcc;
+  }, Promise.resolve());
+  await handleInsertMessages(messages);
+  return _apply && _apply();
+}
+async function receiveMessages(messages = []) {
   messages.forEach((msg) => {
     Timestamp.receive(getClock(), Timestamp.parse(msg.timestamp));
   });
-  return apply(messages).then((records) => {
-    return records;
+  await applyMessages(messages);
+}
+
+async function getSortedMessages() {
+  return new Promise((res, rej) => {
+    window.worker.postMessage({ type: "db-sorted-messages" });
+    window.worker.addEventListener("message", (e) => {
+      if (e.data.type === "sorted-messages") {
+        const messages = e.data.sortedMessages;
+        console.log('"DINGO SORTED MESSAGES!!!', messages);
+        res(messages);
+      }
+    });
   });
 }
+
 async function sync(initialMessages = [], since = null) {
   console.log("dingo running sync", environment);
   if (environment.syncDisabled) {
     return;
   }
 
-  let syncMessages = initialMessages;
+  let messages = initialMessages;
 
   if (since) {
     let timestamp = new Timestamp(since, 0, "0").toString();
-    syncMessages = messages.filter((msg) => msg.timestamp >= timestamp);
+    let sortedMessages = await getSortedMessages();
+    messages = sortedMessages.filter((msg) => msg.timestamp >= timestamp);
   }
 
   let result;
@@ -123,7 +259,10 @@ async function sync(initialMessages = [], since = null) {
     result = await post({
       group_id: environment.group_id,
       client_id: getClock().timestamp.node(),
-      messages: syncMessages,
+      messages: initialMessages.map((m) => ({
+        ...m,
+        value: deserializeValue(m.value),
+      })),
       merkle: getClock().merkle,
     });
   } catch (e) {
@@ -135,27 +274,9 @@ async function sync(initialMessages = [], since = null) {
   );
 
   if (result.messages.length > 0) {
-    let groups = result.messages.reduce((acc, curr) => {
-      if (!acc[curr.dataset]) {
-        acc[curr.dataset] = [curr];
-      } else {
-        acc[curr.dataset] = [...acc[curr.dataset], curr];
-      }
-      return acc;
-    }, {});
-    let records = [];
-    /**Ugly Sync Code  */
-    Object.keys(groups).reduce(async (acc, curr) => {
-      let prevAcc = await acc;
-      console.log("dingo currrecords", groups);
-      let currRecords = await receiveMessages(groups[curr]);
-      console.log("dingo currRecords Received", currRecords);
-      if (currRecords.results && currRecords.results.length) {
-        /**Check to see if record exists */
-        currRecords.results.forEach((r) => DatastoreState.addRecord(curr, r));
-      }
-    }, Promise.resolve());
-    /**End of ugly sync code */
+    receiveMessages(
+      result.messages.map((m) => ({ ...m, value: serializeValue(m.value) }))
+    );
   }
 
   let diffTime = merkle.diff(result.merkle, getClock().merkle);
@@ -168,36 +289,7 @@ async function sync(initialMessages = [], since = null) {
           "This is an internal error that shouldn't happen"
       );
     }
-
-    console.log("dingo returning");
     return sync([], diffTime);
-  } else {
-    console.log("dingo sync good not re-running. PUBLISHING EVENT refresh");
-    if (result && result.messages && result.messages.length) {
-      const grouped = result.messages.reduce((acc, curr) => {
-        console.log("refresh curr", curr.dataset);
-        if (!acc[curr.dataset] && curr.dataset) {
-          console.log("refresh curr dataset", curr.dataset);
-          acc[curr.dataset] = true;
-        }
-        return acc;
-      }, {});
-      console.log(
-        "Recieved Applied Updates From Server!!! Publishing Refresh Message",
-        Object.keys(grouped)
-      );
-      Object.keys(grouped).forEach((type) =>{
-
-        const msg = {
-          message: "REFRESH",
-          payload: type,
-        };
-        console.log('dingo publishing refresh message!!!', msg);
-        MessageBus.publish(msg)
-      });
-    }
-
-    return;
   }
 }
 
@@ -225,25 +317,20 @@ const buildSchema = (data) => {
 };
 
 const insert = async (table, row) => {
-  let id = makeClientId(true);
-  let fields = Object.keys(row);
+  const id = makeClientId(true);
+  const fields = Object.keys(row);
+
   const messages = [
     ...fields.map((k) => {
       return {
+        id: makeClientId(),
         dataset: table,
         row: row.id || id,
         column: k,
-        value: row[k],
+        value: serializeValue(row[k]),
         timestamp: Timestamp.send(getClock()).toString(),
       };
     }),
-    {
-      dataset: table,
-      row: row.id || id,
-      value: 0,
-      column: "tombstone",
-      timestamp: Timestamp.send(getClock()).toString(),
-    },
   ];
 
   console.log("dingo calling apply on new messages", messages);
@@ -259,8 +346,16 @@ const insert = async (table, row) => {
 };
 
 const sendMessages = (messages) => {
-  apply(messages);
-  sync(messages);
+  applyMessages(messages).then(() => sync(messages));
 };
 
-export { sync, buildSchema, insert, apply, receiveMessages };
+export {
+  sync,
+  buildSchema,
+  insert,
+  apply,
+  receiveMessages,
+  registerApply,
+  serializeValue,
+  deserializeValue,
+};

@@ -19,7 +19,7 @@
   }
 
   async function applyMessages() {
-    console.log("dingo adding messages");
+    console.log("dingo adding messages", messages);
     const n = messages.filter((e) => !applliedMessages.includes(e));
     try {
       await MessageViewModel.addBatch(n);

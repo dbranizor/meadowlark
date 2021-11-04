@@ -1,17 +1,27 @@
-import { Timestamp } from "./timestamp";
+import { Timestamp, MutableTimestamp } from "./timestamp";
 import * as merkle from "./merkle";
 import { writable } from "./store";
 import { makeClientId } from "./Utilities.mjs";
-import { buildSchema, insert, apply, sync } from "./database.js";
-import { setClock, makeClock } from "./clock.js";
+import { buildSchema, insert, apply, sync, registerApply, serializeValue, deserializeValue } from "./database.js";
+import { setClock, makeClock, getClock } from "./clock.js";
 import MessageBus from "./message-bus.js";
 import { bootstrap, getWorker } from "./datastores.js";
 import DatastoreState from "./datastore-state";
 import Environment from "./environment-state.js";
-const start = () =>
-  setClock(makeClock(new Timestamp(0, 0, makeClientId(true))));
-const environment = {};
-const setEnvironment = (env) => Environment.set(env);
+const start = async () =>
+  setClock(await makeClock(new Timestamp(0, 0, makeClientId(true))));
+let environment = {};
+
+const setEnvironment = (e) => {
+  console.log("dingo env", e, environment);
+  Environment.set(e)
+  // Environment.update((env) => {
+  //   const oldEnv = JSON.parse(JSON.stringify(env));
+  //   const newEnv = Object.assign(oldEnv, { ...e });
+  //   console.log("dingo new Env dingo currRecords added to store same", oldEnv, newEnv);
+  //   return newEnv;
+  // });
+};
 Environment.subscribe((env) => (environment = env));
 
 let syncInterval;
@@ -39,13 +49,14 @@ function stopSync() {
 function select(sql) {
   return new Promise((res, rej) => {
     console.log("dingo selecting", sql, window.worker);
-    window.worker.postMessage({ type: "db-get", sql });
-    window.worker.onmessage = function (e) {
-      if (e.data.type === "results") {
+    window.worker.postMessage({ type: "SELECT_ALL", sql });
+    window.worker.addEventListener("message", function (e) {
+      if (e.data.type === "SELECT") {
+        console.log("dingo GM", e);
         console.log("dingo selecting results", e.data, e.data.results);
         return res(e.data.results);
       }
-    };
+    });
   });
 }
 
@@ -53,12 +64,17 @@ export {
   startSync,
   stopSync,
   Environment,
+  MutableTimestamp,
   Timestamp,
   merkle,
   makeClientId,
   buildSchema,
   DatastoreState,
+  registerApply,
   MessageBus,
+  serializeValue,
+  deserializeValue,
+  getClock,
   insert,
   start,
   writable,

@@ -21,47 +21,11 @@ const tempGetWorkerInClientSync = () => {
   console.log("dingo is this worker real?", worker);
 };
 
-const apply = (locMessages = []) => {
-  let _worker = getWorker();
-  let clock = getClock();
-  _worker.postMessage({ type: "db-compare-messages", messages: locMessages });
-  _worker.onmessage = function (e) {
-    const applies = [];
-    if (e.data.type === "existing-messages") {
-      const existingMessages = e.data.result || [];
-      locMessages.forEach((msg) => {
-        const existingMessage = existingMessages.find(
-          (e) =>
-            e.dataset === msg.dataset &&
-            e.row === msg.row &&
-            e.column === msg.column
-        );
-        if (!existingMessage || existingMessage.timestamp < msg.timestamp) {
-          applies.push(msg);
-        }
 
-        if (!existingMessage || existingMessage.timestamp !== msg.timestamp) {
-          clock.merkle = merkle.insert(
-            clock.merkle,
-            Timestamp.parse(msg.timestamp)
-          );
-          MessageState.add(msg);
-        }
-      });
-      _worker.postMessage({ type: "db-apply", messages: applies });
-      console.log("dingo existing messages", e.data);
-    }
-    if (e.data.type === "applied-messages") {
-      // sync messages
-      console.log("dingo should apply sync here", e.data, environment);
-      sync(locMessages);
-    }
-  };
-};
 
 async function post(data) {
   console.log("diongo running fetch", environment, environment.user_id);
-  let res = await fetch(`${environment.syncUrl}/sync`, {
+  let res = await fetch(`${environment.sync_url}/sync`, {
     method: "POST",
     mode: "cors",
     credentials: "same-origin",

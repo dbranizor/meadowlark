@@ -13,8 +13,10 @@ const bootstrapAppTables = () => {
   window.worker.postMessage({ type: "ui-invoke", name: "init" });
   getWorker();
   return new Promise((res, rej) => {
-    return (window.worker.onmessage = function (e) {
-      if (e.data.type === "initialized_database") {
+    return window.worker.addEventListener("message", function (e) {
+      console.log("dingo GM", e);
+
+      if (e.data.type === "initialized") {
         console.log("dingo initialized initial tables");
         return res();
       }
@@ -38,19 +40,11 @@ const bootstrap = (sch) => {
         arguments: schema,
       });
 
-      return (window.worker.onmessage = function (e) {
-        console.log(
-          "dingo worker event",
-          e,
-          e.data.type === "initialized_database"
-        );
+      return window.worker.addEventListener("message", function (e) {
+        console.log("dingo GM", e);
         if (e.data.type === "initialized_database") {
           console.log("dingo initialized database");
           return res();
-        }
-
-        if (e.data.type === "applied-messages") {
-          console.log("dingo not applying results", e.data);
         }
       });
     });
