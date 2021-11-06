@@ -227,6 +227,7 @@ async function run(statement) {
   try {
     console.log("dingo running statement: ", statement);
     db.run(statement);
+    console.log("dingo ran statement");
   } catch (error) {
     console.error(`error: ${error}`);
   }
@@ -293,53 +294,42 @@ function queryRun(db, sql, params = {}) {
 
 async function handleInsertMessages(group_id, messages) {
   // get trie
-  
-  const db = await getDatabase();
-  let trie =  getMerkle(db, group_id);
-  queryRun(db, "BEGIN");
 
+  const db = await getDatabase();
+  let trie = getMerkle(db, group_id);
+  db.exec("BEGIN");
+  const messageStatement = db.prepare(
+    `INSERT INTO messages(timestamp, group_id, dataset, row, column, value)` +
+      `values(?, ?, ?, ?, ?, ?);`
+  );
   try {
     for (let message of messages) {
-      const s =
-        `INSERT OR IGNORE INTO messages(timestamp, group_id, dataset, row, column, value)` +
-        `values(?, ?, ?, ?, ?, ?);`;
-      const params = {
-        $timestamp: message.timestamp,
-        $group_id: group_id,
-        $dataset: message.dataset,
-        $row: message.row,
-        $column: message.column,
-        $value: message.value,
-      };
-      const bs = buildPreparedStatement(s, Object.keys(params));
-      const ps = db.prepare(bs);
-      const result = ps.run(params);
+
+      const result = messageStatement.run([
+        message.timestamp,
+        group_id,
+        message.dataset,
+        message.row,
+        message.column,
+        message.value,
+      ]);
       // TODO: Debug this so that I can check that result === 1
       if (result) {
         console.log("INSERTING MESSAGE INTO MERKLE");
         trie = merkle.insert(trie, Timestamp.parse(message.timestamp));
       }
-
     }
 
-    const mp = {
-      $group_id: group_id,
-      $merkle: JSON.stringify(trie),
-    };
-
-    const ms = buildPreparedStatement(
-      `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`,
-      mp
+    const ms = db.prepare(
+      `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`
     );
+    ms.run([group_id, JSON.stringify(trie)]);
 
-    // update merkle tree table row
-    queryRun(db, ms, mp);
-    queryRun(db, "COMMIT");
+    db.exec("COMMIT");
   } catch (error) {
-    queryRun(db, "ROLLBACK");
+    db.exec("ROLLBACK");
     throw error;
   }
-
 
   self.postMessage({ type: "INSERT_MESSAGE", results: JSON.stringify(trie) });
 }
@@ -379,91 +369,37 @@ async function handleSchema(schema = {}) {
   );
 }
 
-async function handleApply(message) {
-  const sql = `SELECT * from ${message.dataset} where id = '${message.row}';`;
-  const params = {
-    $dataset: message.dataset,
-    $row: message.row,
-  };
+async function handleApply(messages) {
   const db = await getDatabase();
-  const record = queryObj(
-    db,
-    `SELECT * FROM ${message.dataset} WHERE id = '${message.row}'`
-  );
-  console.log("dingo handle apply?", message);
-
-  console.log("upserting message to tables", message);
-  if (!record.id) {
-    // const s = `INSERT INTO ${message.dataset}(id, ${message.column}) VALUES ('${message.row}', '${message.value}');`;
-    const insertParams = {
-      $dataset: message.dataset,
-      $column: message.column,
-      $row: message.row,
-      $value: deserializeValue(message.value),
-    };
-    queryRun(
-      db,
-      `INSERT INTO ${insertParams.$dataset}(id, ${insertParams.$column}) VALUES ('${insertParams.$row}', '${insertParams.$value}');`
-    );
-    console.log("dingo apply sql", sql);
-  } else {
-    try {
-      // const sql = `UPDATE ${message.dataset} SET ${message.column} = '${message.value}' WHERE id = '${message.row}' `;
-      const updateParams = {
-        $dataset: message.dataset,
-        $column: message.column,
-        $value: deserializeValue(message.value),
-        $row: message.row,
-      };
-      queryRun(
-        db,
-        `UPDATE ${updateParams.$dataset} SET ${updateParams.$column} = '${updateParams.$value}' WHERE id = '${updateParams.$row}'`
+  db.run('BEGIN TRANSACTION')
+  try {
+    for (let message of messages) {
+      const val = deserializeValue(message.value);
+      db.exec(
+        `INSERT INTO ${message.dataset} (id, ${message.column}) VALUES ('${
+          message.row
+        }', ${
+          typeof val === "string" ? "'" + val + "'" : val
+        }) ON CONFLICT(id) DO UPDATE SET ${message.column} = ${
+          typeof val === "string" ? "'" + val + "'" : val
+        } WHERE id = '${message.row}'`
       );
-      console.log("dingo update sql", sql);
-    } catch (error) {
-      throw new Error(`Error: `, error);
     }
+  } catch (error) {
+    db.run('ROLLBACK')
+    //TODO: Post response to failure ? self.postMessage({ type: "FAILED" });
+    throw new Error(`Error: ${error}`);
   }
-
+  db.run('COMMIT')
   self.postMessage({ type: "APPLIED" });
 }
 
-async function handleApplies(messages = []) {
-  const db = await getDatabase();
-  console.log("dingo running handleAPplies", messages);
-
-  await messages.reduce(async (acc, curr) => {
-    console.log("dingo awaiting acc");
-    await acc;
-    console.log("dingo acc");
-    const sql = `SELECT * from ${curr.dataset} where id = '${curr.row}';`;
-    let row;
-    try {
-      row = await get(sql);
-    } catch (error) {
-      throw new Error(`Error: `, error);
-    }
-    console.log("HandleRow Set Row Dingo", row, curr);
-    if (!row || !row.length) {
-      const sql = `INSERT INTO ${curr.dataset}(id, ${curr.column}) VALUES ('${curr.row}', '${curr.value}');`;
-      console.log("dingo sql", sql);
-      try {
-        await run(sql, false);
-      } catch (error) {
-        throw new Error(`Error: `, error);
-      }
-    } else {
-      try {
-        const sql = `UPDATE ${curr.dataset} SET ${curr.column} = '${curr.value}' WHERE id = '${curr.row}' `;
-        await run(sql, false);
-      } catch (error) {
-        throw new Error(`Error: `, error);
-      }
-    }
-    return acc;
-  }, Promise.resolve());
-  console.log("Applied Message");
-  return true;
+function closeDatabase() {
+  if (_db) {
+    output(`Closed db`);
+    _db.close();
+    _db = null;
+  }
 }
 
 let methods = {
@@ -484,31 +420,18 @@ if (typeof self !== "undefined") {
         run(msg.data.sql);
         break;
       case "RUN_APPLY":
-        handleApply(msg.data.message);
-        break;
-      case "db-apply":
-        try {
-          await handleApplies(msg.data.messages);
-        } catch (error) {
-          throw new Error(`Error :`, error);
-        }
-        const results = await get(
-          `SELECT * FROM ${msg.data.messages[0].dataset};`
-        );
-        console.log("dingo gotz results", results);
-        self.postMessage({ type: "applied-messages", results });
+        handleApply(msg.data.messages);
         break;
       case "GET_MOST_RECENT_LOCAL_MESSAGES":
         handleGetMostRecent(msg.data.message);
         break;
       case "RUN_INSERT_MESSAGES":
-
         handleInsertMessages(msg.data.group_id, msg.data.message);
         break;
       case "GET_MERKLE":
         console.log("Getting Merkle", msg.data.group_id);
-        if(!db){
-          db = await getDatabase()
+        if (!db) {
+          db = await getDatabase();
         }
         let trie = await getMerkle(db, msg.data.group_id);
         self.postMessage({ type: "MERKLE", results: trie });

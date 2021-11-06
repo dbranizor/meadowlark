@@ -3,7 +3,7 @@ import { writable, insert, select } from "@meadowlark-labs/central";
 const InitMessagesModel = function () {
   const schema = {
     events: {
-      id: "TEXT",
+      id: "TEXT PRIMARY KEY",
       cat: "TEXT",
       msg: "TEXT",
       coi: "TEXT"

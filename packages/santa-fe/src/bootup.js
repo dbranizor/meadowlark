@@ -25,6 +25,7 @@ const santaFe = (
   if (init) {
     registerApply(applyFunc)
     /**Setup local database */
+    // start().then(() => _localized(...localized));
     _localized(...localized).then(() => start());
   }
 };

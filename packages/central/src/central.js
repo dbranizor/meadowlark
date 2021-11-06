@@ -8,8 +8,11 @@ import MessageBus from "./message-bus.js";
 import { bootstrap, getWorker } from "./datastores.js";
 import DatastoreState from "./datastore-state";
 import Environment from "./environment-state.js";
-const start = async () =>
-  setClock(await makeClock(new Timestamp(0, 0, makeClientId(true))));
+const start = async () => {
+  const c = await makeClock(new Timestamp(0, 0, makeClientId(true)));
+  return setClock(c);
+}
+  
 let environment = {};
 
 const setEnvironment = (e) => {

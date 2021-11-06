@@ -15,14 +15,15 @@ unsubscribes.push(
   MessageState.subscribe((m) => (messages = m))
 );
 
-const handleApplyMessage = async (message) => {
+const handleApplyMessage = async (messages) => {
   return new Promise((res, rej) => {
     getWorker();
-    console.log("dingo running apply ", message);
-    window.worker.postMessage({ type: EVENTS.RUN_APPLY, message });
+    console.log("dingo running apply ", messages);
+    window.worker.postMessage({ type: EVENTS.RUN_APPLY, messages: messages });
     window.worker.addEventListener("message", (e) => {
       console.log("dingo GM", e);
       if (e.data.type === EVENTS.APPLIED) {
+        console.log("dingo GMA", e);
         res(true);
       }
     });
@@ -60,14 +61,14 @@ function deserializeValue(value) {
  * Apply the data operation contained in a message to our local data store
  * (i.e., set a new property value for a secified dataset/table/row/column).
  */
-const apply = async (message) => {
+const apply = async (messages) => {
   getWorker();
   if (!window.worker) {
     console.error("dingo no worker", worker, newSecret(), newSecret());
     throw new Error(`Error: No Worker`);
   }
 
-  await handleApplyMessage(message);
+  await handleApplyMessage(messages);
   return true;
 };
 
@@ -156,6 +157,7 @@ async function applyMessages(incomingMessages) {
   );
   let clock = getClock();
   let messages = [];
+  let appliedMessages = [];
   // Look at each incoming message. If it's new to us (i.e., we don't have it in
   // our local store), or is newer than the message we have for the same field
   // (i.e., dataset + row + column), then apply it to our local data store and
@@ -188,7 +190,7 @@ async function applyMessages(incomingMessages) {
     ) {
       // `apply()` means that we're going to actually update our local data
       // store with the operation contained in the message.
-      await apply(incomingMsgForField);
+      appliedMessages = [...appliedMessages, incomingMsgForField]
     } else {
       console.log(
         "dingo not applying?",
@@ -217,6 +219,7 @@ async function applyMessages(incomingMessages) {
     }
     return prevAcc;
   }, Promise.resolve());
+  await apply(appliedMessages);
   await handleInsertMessages(messages);
   return _apply && _apply();
 }
