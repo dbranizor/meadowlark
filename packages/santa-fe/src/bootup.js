@@ -1,6 +1,11 @@
 import Message from "./components/messages/MessageViewModel.js";
 import Table from "./components/tables/table-state.js";
-import { setEnvironment, start,  registerApply} from "@meadowlark-labs/central";
+import {
+  setEnvironment,
+  startClock,
+  registerApply,
+  startDatabase,
+} from "@meadowlark-labs/central";
 import messageViewModel from "./components/messages/MessageViewModel.js";
 const MessageCatalog = {
   Message,
@@ -9,7 +14,7 @@ const MessageCatalog = {
 
 const applyFunc = () => {
   messageViewModel.refresh();
-}
+};
 const santaFe = (
   { localized, group_id, user_id, syncDisabled, sync_url, debug, isOffline },
   init = true
@@ -23,14 +28,17 @@ const santaFe = (
     isOffline,
   });
   if (init) {
-    registerApply(applyFunc)
+    registerApply(applyFunc);
+    startDatabase()
+      .then(() =>  _localized(...localized))
+      .then(() => startClock());
     /**Setup local database */
     // start().then(() => _localized(...localized));
-    _localized(...localized).then(() => start());
   }
 };
 
 const _localized = async function (components) {
+  
   return new Promise(async (res, rej) => {
     const args = Array.prototype.slice.call(arguments);
     await args.reduce(async (acc, curr) => {

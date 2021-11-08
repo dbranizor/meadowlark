@@ -8,7 +8,19 @@ import MessageBus from "./message-bus.js";
 import { bootstrap, getWorker } from "./datastores.js";
 import DatastoreState from "./datastore-state";
 import Environment from "./environment-state.js";
-const start = async () => {
+
+const startDatabase = async () => {
+  getWorker()
+  return new Promise((res, rej) => {
+    window.worker.postMessage({type: "INIT_DATABASE"})
+    window.worker.addEventListener("message", (e) => {
+      if(e.data.type === "INITIALIZED_DB"){
+        return res(true)
+      }
+    })
+  })
+}
+const startClock = async () => {
   const c = await makeClock(new Timestamp(0, 0, makeClientId(true)));
   return setClock(c);
 }
@@ -64,6 +76,7 @@ function select(sql) {
 }
 
 export {
+  startDatabase,
   startSync,
   stopSync,
   Environment,
@@ -79,7 +92,7 @@ export {
   deserializeValue,
   getClock,
   insert,
-  start,
+  startClock,
   writable,
   sync,
   select,

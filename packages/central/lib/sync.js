@@ -45,33 +45,45 @@ const sqlMessageMerkles = `CREATE TABLE if not exists messages_merkles
 async function _init() {
   console.log("dingo setting up db");
   SQL = await initSqlJs({ locateFile: (file) => file });
-  sqlFS = new SQLiteFS(SQL.FS, idbBackend);
+  sqlFS = new SQLiteFS(SQL.FS, new IndexedDBBackend());
   SQL.register_for_idb(sqlFS);
 
-  SQL.FS.mkdir("/blocked");
-  SQL.FS.mount(sqlFS, {}, "/blocked");
-  fakeValue = 100;
+  SQL.FS.mkdir("/sql");
+  SQL.FS.mount(sqlFS, {}, "/sql");
+
+  const path = "/sql/db.sqlite";
+
+  if (typeof SharedArrayBuffer === "undefined") {
+    let stream = SQL.FS.open(path, "a+");
+    await stream.node.contents.readIfFallback();
+    SQL.FS.close(stream);
+  }
+
+  _db = new SQL.Database(path, { filename: true });
+  _db.exec(`
+  PRAGMA cache_size=-${cacheSize};
+  PRAGMA page_size=${pageSize};
+  PRAGMA journal_mode=MEMORY;
+`);
+  console.log("dingo created db");
+  _db.exec("VACUUM");
+  _db.exec(sqlMessages);
+  _db.exec(sqlMessageMerkles)
+  self.postMessage({ type: "INITIALIZED_DB" });
   return true;
 }
 
 async function init(schema = false) {
   console.log("dingo called init", schema, ready);
-  if (ready && schema) {
+  if (schema) {
     await handleSchema(schema);
-    self.postMessage({ type: "initialized_database" });
+    self.postMessage({ type: "INITIALIZED_APP" });
     return ready;
   }
 
-  if (ready) {
-    self.postMessage({ type: "initialized_database" });
-    return ready;
-  }
-
-  ready = await _init();
   console.log("dingo building tables", sqlMessages);
-  run(sqlMessages);
-  run(sqlMessageMerkles);
-  return self.postMessage({ type: "initialized_database" });
+
+  return self.postMessage({ type: "INITIALIZED_APP" });
 }
 
 function output(msg) {
@@ -83,43 +95,8 @@ function getDBName() {
 }
 
 let _db = null;
-function closeDatabase() {
-  if (_db) {
-    output(`Closed db`);
-    _db.close();
-    _db = null;
-  }
-}
 
 async function getDatabase() {
-  if (_db == null) {
-    console.log("dingo creating db", fakeValue);
-    _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
-
-    // Should ALWAYS use the journal in memory mode. Doesn't make
-    // any sense at all to write the journal
-    //
-    // It's also important to use the same page size that our storage
-    // system uses. This will change in the future so that you don't
-    // have to worry about sqlite's page size (requires some
-    // optimizations)
-    _db.exec(`
-      PRAGMA cache_size=-${cacheSize};
-      PRAGMA page_size=${pageSize};
-      PRAGMA journal_mode=MEMORY;
-    `);
-    console.log("dingo created db");
-    _db.exec("VACUUM");
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
-    output(
-      `Opened ${getDBName()} (${currentBackendType}) cache size: ${cacheSize}`
-    );
-    console.log("dingo ran all the db shit");
-  } else {
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
-  }
   return _db;
 }
 
@@ -133,7 +110,7 @@ async function fetchJSON(url) {
 }
 
 async function load() {
-  let db = await getDatabase();
+  let db = _db;
 
   let storyIds = await fetchJSON(
     "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
@@ -186,7 +163,7 @@ async function load() {
 }
 
 async function search(term) {
-  let db = await getDatabase();
+  let db = _db;
 
   if (!term.includes("NEAR") && !term.match(/"\*/)) {
     term = `"*${term}*"`;
@@ -208,7 +185,7 @@ async function search(term) {
 }
 
 async function count() {
-  let db = await getDatabase();
+  let db = _db;
 
   db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS comments USING fts3(content, title, url);
@@ -223,7 +200,7 @@ async function count() {
 }
 
 async function run(statement) {
-  let db = await getDatabase();
+  let db = _db;
   try {
     console.log("dingo running statement: ", statement);
     db.run(statement);
@@ -295,7 +272,7 @@ function queryRun(db, sql, params = {}) {
 async function handleInsertMessages(group_id, messages) {
   // get trie
 
-  const db = await getDatabase();
+  const db = _db;
   let trie = getMerkle(db, group_id);
   db.exec("BEGIN");
   const messageStatement = db.prepare(
@@ -304,7 +281,6 @@ async function handleInsertMessages(group_id, messages) {
   );
   try {
     for (let message of messages) {
-
       const result = messageStatement.run([
         message.timestamp,
         group_id,
@@ -335,7 +311,7 @@ async function handleInsertMessages(group_id, messages) {
 }
 
 async function handleGetMostRecent(message) {
-  const db = await getDatabase();
+  const db = _db;
   // let results;
 
   // const s = `SELECT * FROM messages WHERE dataset = '${message.dataset}' AND row = '${message.row}' AND column = '${message.column}' ORDER BY timestamp;`;
@@ -370,8 +346,8 @@ async function handleSchema(schema = {}) {
 }
 
 async function handleApply(messages) {
-  const db = await getDatabase();
-  db.run('BEGIN TRANSACTION')
+  const db = _db;
+  db.run("BEGIN TRANSACTION");
   try {
     for (let message of messages) {
       const val = deserializeValue(message.value);
@@ -386,11 +362,11 @@ async function handleApply(messages) {
       );
     }
   } catch (error) {
-    db.run('ROLLBACK')
+    db.run("ROLLBACK");
     //TODO: Post response to failure ? self.postMessage({ type: "FAILED" });
     throw new Error(`Error: ${error}`);
   }
-  db.run('COMMIT')
+  db.run("COMMIT");
   self.postMessage({ type: "APPLIED" });
 }
 
@@ -413,6 +389,10 @@ if (typeof self !== "undefined") {
   self.onmessage = async (msg) => {
     let db;
     switch (msg.data.type) {
+      case "INIT_DATABASE":
+        closeDatabase();
+        await _init();
+        break;
       case "search":
         search(msg.data.name);
         break;
@@ -431,7 +411,7 @@ if (typeof self !== "undefined") {
       case "GET_MERKLE":
         console.log("Getting Merkle", msg.data.group_id);
         if (!db) {
-          db = await getDatabase();
+          db = _db;
         }
         let trie = await getMerkle(db, msg.data.group_id);
         self.postMessage({ type: "MERKLE", results: trie });
@@ -440,14 +420,14 @@ if (typeof self !== "undefined") {
         get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC");
         break;
       case "SELECT_ALL":
-        db = await getDatabase();
+        db = _db;
         const selectResults = queryAll(db, msg.data.sql);
         self.postMessage({ type: "SELECT", results: selectResults });
         break;
       case "db-init":
         break;
       case "db-sorted-messages":
-        db = await getDatabase();
+        db = _db;
         console.log("DINGO SORTING IN SORT DB THREAD");
         const sortedMessages = queryAll(
           db,

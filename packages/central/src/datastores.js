@@ -9,21 +9,6 @@ const getWorker = () => {
   }
 };
 
-const bootstrapAppTables = () => {
-  window.worker.postMessage({ type: "ui-invoke", name: "init" });
-  getWorker();
-  return new Promise((res, rej) => {
-    return window.worker.addEventListener("message", function (e) {
-      console.log("dingo GM", e);
-
-      if (e.data.type === "initialized") {
-        console.log("dingo initialized initial tables");
-        return res();
-      }
-    });
-  });
-};
-
 const bootstrap = (sch) => {
   let schema = sch;
   Object.keys(sch).forEach((s) => {
@@ -32,21 +17,19 @@ const bootstrap = (sch) => {
   });
   getWorker();
   return new Promise((res, err) => {
-    bootstrapAppTables().then(() => {
-      console.log("dingo calling ui invoke with schema", schema);
-      window.worker.postMessage({
-        type: "ui-invoke",
-        name: "init",
-        arguments: schema,
-      });
+    console.log("dingo calling ui invoke with schema", schema);
+    window.worker.postMessage({
+      type: "ui-invoke",
+      name: "init",
+      arguments: schema,
+    });
 
-      return window.worker.addEventListener("message", function (e) {
-        console.log("dingo GM", e);
-        if (e.data.type === "initialized_database") {
-          console.log("dingo initialized database");
-          return res();
-        }
-      });
+    return window.worker.addEventListener("message", function (e) {
+      console.log("dingo GM", e);
+      if (e.data.type === "INITIALIZED_APP") {
+        console.log("dingo initialized database");
+        return res();
+      }
     });
   });
 };
