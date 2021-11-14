@@ -10,7 +10,12 @@ import bodyParser from "body-parser";
 import cors from "cors";
 
 import https from "https";
-import { Timestamp, merkle } from "@meadowlark-labs/central";
+import {
+  Timestamp,
+  merkle,
+  serializeValue,
+  deserializeValue,
+} from "@meadowlark-labs/central";
 // const https = require("https");
 // let { Timestamp } = require("../deps/timestamp");
 // let merkle = require("../deps/merkle");
@@ -132,31 +137,31 @@ function init() {
   sqlite3;
 }
 
-function serializeValue(value) {
-  if (value === null) {
-    return "0:";
-  } else if (typeof value === "number") {
-    return "N:" + value;
-  } else if (typeof value === "string") {
-    return "S:" + value;
-  }
+// function serializeValue(value) {
+//   if (value === null) {
+//     return "0:";
+//   } else if (typeof value === "number") {
+//     return "N:" + value;
+//   } else if (typeof value === "string") {
+//     return "S:" + value;
+//   }
 
-  throw new Error("Unserializable value type: " + JSON.stringify(value));
-}
+//   throw new Error("Unserializable value type: " + JSON.stringify(value));
+// }
 
-function deserializeValue(value) {
-  const type = value[0];
-  switch (type) {
-    case "0":
-      return null;
-    case "N":
-      return parseFloat(value.slice(2));
-    case "S":
-      return value.slice(2);
-  }
+// function deserializeValue(value) {
+//   const type = value[0];
+//   switch (type) {
+//     case "0":
+//       return null;
+//     case "N":
+//       return parseFloat(value.slice(2));
+//     case "S":
+//       return value.slice(2);
+//   }
 
-  throw new Error("Invalid type key for value: " + value);
-}
+//   throw new Error("Invalid type key for value: " + value);
+// }
 
 function getMerkle(group_id) {
   let rows = queryAll("SELECT * FROM messages_merkles WHERE group_id = ?", [
@@ -191,6 +196,7 @@ function addMessages(groupId, messages) {
         // Update the merkle trie
         trie = merkle.insert(trie, Timestamp.parse(message.timestamp));
       }
+      console.log("dingo");
     }
 
     queryRun(
@@ -220,7 +226,7 @@ app.get("/dev/status", (req, res) => {
   if (!urlQuery.has("group_id")) {
     res.status("500").statusMessage("No GROUP ID Passed");
   }
-  const  group_id  = urlQuery.get("group_id");
+  const group_id = urlQuery.get("group_id");
 
   let newMessages;
   try {
@@ -239,13 +245,14 @@ app.get("/dev/status", (req, res) => {
 
 app.post("/sync", (req, res) => {
   let { group_id, client_id, messages, merkle: clientMerkle } = req.body;
-  console.log('dingo props', group_id, client_id, JSON.stringify(clientMerkle))
+  console.log("dingo props", group_id, client_id, JSON.stringify(clientMerkle));
   let trie = addMessages(group_id, messages);
   console.log("dingo sync called");
   let newMessages = [];
   if (clientMerkle) {
     console.log("dingo clientMerkle");
     let diffTime = merkle.diff(trie, clientMerkle);
+    console.log("dingo have diff time", diffTime);
     if (diffTime) {
       let timestamp = new Timestamp(diffTime, 0, "0").toString();
       newMessages = queryAll(
@@ -257,9 +264,10 @@ app.post("/sync", (req, res) => {
         ...msg,
         value: deserializeValue(msg.value),
       }));
+      console.log("dingo have newMessages");
     }
   }
-  console.log("dingo sending");
+  console.log("dingo sending", JSON.stringify(newMessages));
   // setPrecense(req);
   res.send(
     JSON.stringify({

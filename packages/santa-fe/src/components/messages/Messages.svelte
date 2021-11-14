@@ -1,9 +1,10 @@
 <script>
   import Message from "./Message.svelte";
-  import { onDestroy, onMount } from "svelte";
+  import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import MessageViewModel from "./MessageViewModel.js";
 
   export let messages = [];
+  const dispatch = createEventDispatcher();
   let applliedMessages = [];
 
   let displayedMessages = [];
@@ -18,7 +19,6 @@
   }
 
   async function applyMessages() {
-    console.log("dingo adding messages");
     const n = messages.filter((e) => !applliedMessages.includes(e));
     try {
       await MessageViewModel.addBatch(n);
@@ -26,6 +26,7 @@
       throw new Error(`Error: ${e}`);
     }
     applliedMessages = [...applliedMessages, ...n];
+    dispatch("MESSAGES_APPLIED", applliedMessages);
   }
   onMount(async () => {
     unsubscribes.push(
@@ -45,11 +46,11 @@
   <ul>
     {#each displayedMessages as event}
       <li>
-        <Message type="info" display={true} id={event.type}>
+        <Message on:CLEAR_TOASTER={(e) => MessageViewModel.delete(event.id)} type="info" display={true} id={event.type}>
           <span slot="header">
-            {event.cat}
+            {event.cat} 
           </span>
-          <span slot="body">{event.msg}</span>
+          <span slot="body">{event.msg} {event.id}</span>
         </Message>
       </li>
     {/each}

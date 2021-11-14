@@ -20,11 +20,8 @@ const InitTableState = function () {
   const SyncReady = writable(false);
   const methods = {
     init: async function (schema) {
-      console.log("dingo table state running update", schema);
       await bootstrap(schema);
-      console.log("dingo TABLE state ran update", schema);
       return SyncReady.update((sync) => {
-        console.log("dingo TABLE state sync being set", sync);
         return true;
       });
     },

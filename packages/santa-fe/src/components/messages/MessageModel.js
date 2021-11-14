@@ -1,19 +1,18 @@
-import { writable, insert, select } from "@meadowlark-labs/central";
+import { writable, insert, select, _delete } from "@meadowlark-labs/central";
 
 const InitMessagesModel = function () {
   const schema = {
     events: {
-      id: "TEXT",
+      id: "TEXT PRIMARY KEY",
       cat: "TEXT",
       msg: "TEXT",
-      coi: "TEXT",
+      coi: "TEXT"
     },
   };
   const { set, subscribe, update } = writable([]);
 
   const methods = {
     insert: async function (message) {
-      console.log('dingo inserting via message model')
       const recordID = await insert("events", message);
       update((msg) => {
         if (recordID) {
@@ -23,9 +22,11 @@ const InitMessagesModel = function () {
       });
     },
     refresh: async function () {
-      const localizedMessages = await select('SELECT * FROM events WHERE tombstone <> 1');
-      console.log("Dingo got localized Messages", localizedMessages);
+      const localizedMessages = await select('SELECT * FROM events where tombstone <> 1');
       set(localizedMessages);
+    },
+    delete: async function(id){
+      await _delete("events", id);
     }
   };
 

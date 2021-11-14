@@ -3,14 +3,20 @@ import initSqlJs from "@jlongster/sql.js";
 import { SQLiteFS } from "absurd-sql";
 // import IndexedDBBackend from '../../indexeddb/backend';
 import IndexedDBBackend from "absurd-sql/dist/indexeddb-backend.js";
-import { buildSchema } from "@meadowlark-labs/central";
+import {
+  buildSchema,
+  Timestamp,
+  merkle,
+  deserializeValue,
+  WebDao,
+} from "@meadowlark-labs/central";
 
 // Various global state for the demo
 
 let currentBackendType = "idb";
 let cacheSize = 5000;
 let pageSize = 8192;
-let dbName = `fts.sqlite`;
+let dbName = `meadowlark.sqlite`;
 
 let fakeValue = 0;
 
@@ -23,43 +29,40 @@ let SQL = null;
 let ready = null;
 
 const sqlMessages = `CREATE TABLE if not exists messages
-  (timestamp TEXT,
+  (
+   id TEXT,
+   timestamp TEXT,
    group_id TEXT,
    dataset TEXT,
    row TEXT,
    column TEXT,
    value TEXT,
-   PRIMARY KEY(timestamp, group_id))`;
+   PRIMARY KEY(timestamp, row, column))`;
+
+const sqlMessageMerkles = `CREATE TABLE if not exists messages_merkles
+   (group_id TEXT PRIMARY KEY,
+    merkle TEXT);`;
+
+
+const webDao = new WebDao();    
 
 async function _init() {
-  console.log("dingo setting up db");
-  SQL = await initSqlJs({ locateFile: (file) => file });
-  sqlFS = new SQLiteFS(SQL.FS, idbBackend);
-  SQL.register_for_idb(sqlFS);
-
-  SQL.FS.mkdir("/blocked");
-  SQL.FS.mount(sqlFS, {}, "/blocked");
-  fakeValue = 100;
+  await webDao.init(initSqlJs);
+  await webDao.exec(sqlMessages)
+  await webDao.exec(sqlMessageMerkles)
+  self.postMessage({ type: "INITIALIZED_DB" });
   return true;
 }
 
 async function init(schema = false) {
-  console.log('dingo called init', schema, ready)
-  if (ready && schema) {
+  if (schema) {
     await handleSchema(schema);
-    self.postMessage({ type: "initialized_database" });
+    self.postMessage({ type: "INITIALIZED_APP" });
     return ready;
   }
 
-  if (ready) {
-    self.postMessage({ type: "initialized_database" });
-    return ready;
-  }
 
-  ready = await _init();
-  console.log("dingo building tables", sqlMessages);
-  run(sqlMessages);
-  return self.postMessage({ type: "initialized_database" });
+  return self.postMessage({ type: "INITIALIZED_APP" });
 }
 
 function output(msg) {
@@ -70,46 +73,6 @@ function getDBName() {
   return dbName;
 }
 
-let _db = null;
-function closeDatabase() {
-  if (_db) {
-    output(`Closed db`);
-    _db.close();
-    _db = null;
-  }
-}
-
-async function getDatabase() {
-  if (_db == null) {
-    console.log("dingo creating db", fakeValue);
-    _db = new SQL.Database(`/blocked/${getDBName()}`, { filename: true });
-
-    // Should ALWAYS use the journal in memory mode. Doesn't make
-    // any sense at all to write the journal
-    //
-    // It's also important to use the same page size that our storage
-    // system uses. This will change in the future so that you don't
-    // have to worry about sqlite's page size (requires some
-    // optimizations)
-    _db.exec(`
-      PRAGMA cache_size=-${cacheSize};
-      PRAGMA page_size=${pageSize};
-      PRAGMA journal_mode=MEMORY;
-    `);
-    console.log("dingo created db");
-    _db.exec("VACUUM");
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
-    output(
-      `Opened ${getDBName()} (${currentBackendType}) cache size: ${cacheSize}`
-    );
-    console.log("dingo ran all the db shit");
-  } else {
-    console.log("dingo sending initialized message");
-    self.postMessage({ type: "initialized" });
-  }
-  return _db;
-}
 
 function formatNumber(num) {
   return new Intl.NumberFormat("en-US").format(num);
@@ -121,7 +84,6 @@ async function fetchJSON(url) {
 }
 
 async function load() {
-  let db = await getDatabase();
 
   let storyIds = await fetchJSON(
     "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
@@ -159,22 +121,21 @@ async function load() {
     }
   }
 
-  db.exec("BEGIN TRANSACTION");
-  let stmt = db.prepare(
+  webDao.exec("BEGIN TRANSACTION");
+  let stmt = webDao.prepare(
     "INSERT INTO comments (content, url, title) VALUES (?, ?, ?)"
   );
   for (let result of results) {
     let url = `https://news.ycombinator.com/item?id=${result.id}`;
     stmt.run([result.text, url, result.storyTitle]);
   }
-  db.exec("COMMIT");
+  webDao.exec("COMMIT");
   console.log("done!");
 
   count();
 }
 
 async function search(term) {
-  let db = await getDatabase();
 
   if (!term.includes("NEAR") && !term.match(/"\*/)) {
     term = `"*${term}*"`;
@@ -182,7 +143,7 @@ async function search(term) {
 
   let results = [];
 
-  let stmt = db.prepare(
+  let stmt = webDao.prepare(
     `SELECT snippet(comments) as content, url, title FROM comments WHERE content MATCH ?`
   );
   stmt.bind([term]);
@@ -196,13 +157,12 @@ async function search(term) {
 }
 
 async function count() {
-  let db = await getDatabase();
 
-  db.exec(`
+  webDao.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS comments USING fts3(content, title, url);
   `);
 
-  let stmt = db.prepare("SELECT COUNT(*) as count FROM comments");
+  let stmt = webDao.prepare("SELECT COUNT(*) as count FROM comments");
   stmt.step();
   let row = stmt.getAsObject();
   self.postMessage({ type: "count", count: row.count });
@@ -210,15 +170,7 @@ async function count() {
   stmt.free();
 }
 
-async function run(statement) {
-  let db = await getDatabase();
-  try {
-    console.log("dingo running statement: ", statement);
-    db.run(statement);
-  } catch (error) {
-    console.error(`error: ${error}`);
-  }
-}
+
 
 const rowMapper = (result) => {
   return result && result.length
@@ -232,104 +184,125 @@ const rowMapper = (result) => {
     : [];
 };
 
-async function get(statement, post = true) {
-  let db = await getDatabase();
-  let result;
-  console.log("dingo running SQL GET DAO: ", statement);
-  try {
-    result = db.exec(statement);
-  } catch (error) {
-    console.error(`error: ${error}`);
+function buildPreparedStatement(query, fields = []) {
+  if (!fields || !fields.length) {
+    return query;
   }
-  console.log("dingo SQL GET DAO get results: ", result);
-
-  const resturnData = rowMapper(result);
-  console.log("dingo SQL GET DAO get results mapped: ", resturnData);
-  post ? self.postMessage({ type: "results", results: resturnData }) : post;
-  return resturnData;
+  /** Query starts as select * from something WHERE ? */
+  const nq = fields.reduce((acc, curr) => {
+    let accQuery = acc.replace("?", curr);
+    return accQuery;
+  }, query);
+  return nq;
 }
 
-async function handleCompare(messages) {
-  const db = await getDatabase();
 
-  let results;
 
-  const datasets = buildINClause(messages.map((m) => m.dataset));
-  const rows = buildINClause(messages.map((m) => m.row));
-  const columns = buildINClause(messages.map((m) => m.column));
 
-  const SQL = `SELECT * FROM messages where dataset IN(${datasets}) AND ROW IN(${rows}) AND COLUMN IN(${columns})`;
+export function getMerkle(group_id) {
+  let obj =  webDao.queryObj("SELECT * FROM messages_merkles WHERE group_id = ?", {
+    $group_id: group_id,
+  });
 
+  if (obj.merkle) {
+    return JSON.parse(obj.merkle);
+  } else {
+    return {};
+  }
+}
+
+
+async function handleInsertMessages(group_id, messages) {
+  // get trie
+
+  let trie = await getMerkle(group_id);
+  await webDao.exec("BEGIN");
+  const messageStatement = webDao.prepare(
+    `INSERT INTO messages(timestamp, group_id, dataset, row, column, value)` +
+      `values(?, ?, ?, ?, ?, ?);`
+  );
   try {
-    results = db.exec(SQL);
+    for (let message of messages) {
+      const result = await webDao.runPrepare(messageStatement, [
+        message.timestamp,
+        group_id,
+        message.dataset,
+        message.row,
+        message.column,
+        message.value,
+      ], () => webDao.queryObj(`select * from messages where group_id = '${group_id}' AND timestamp = '${message.timestamp}'`))
+      // TODO: Debug this so that I can check that result === 1
+      if (result.column) {
+        console.log("INSERTING MESSAGE INTO MERKLE");
+        trie = merkle.insert(trie, Timestamp.parse(message.timestamp));
+      }
+    }
+
+    const ms = webDao.prepare(
+      `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`
+    );
+    await webDao.runPrepare(ms, [group_id, JSON.stringify(trie)])
+
+    await webDao.exec("COMMIT");
   } catch (error) {
-    throw new Error(`ERROR: ${error}`);
+    await webDao.exec("ROLLBACK");
+    throw error;
   }
-  results = rowMapper(results);
-  self.postMessage({ type: "existing-messages", results });
-  function buildINClause(data = []) {
-    return data
-      .map((d) => `'${d}'`)
-      .reduce((acc, curr) => {
-        if (acc.some((a) => a === curr)) {
-          return acc;
-        }
-        return [...acc, curr];
-      }, [])
-      .join(",");
-  }
+
+
+  self.postMessage({ type: "INSERT_MESSAGE", results: JSON.stringify(trie) });
+}
+
+async function handleGetMostRecent(message) {
+
+  // let results;
+
+
+  const result =  webDao.queryObj(
+    `SELECT * FROM messages WHERE dataset = ? AND row = ? AND column = ? ORDER BY timestamp DESC;`,
+    { $message: message.dataset, $row: message.row, $column: message.column }
+  );
+  const record = !result.column ? false : result;
+  self.postMessage({ type: "MOST_RECENT_LOCAL_MESSAGES", results: record });
 }
 
 async function handleSchema(schema = {}) {
-  console.log("dingo running handleSchema", schema);
   const statement = buildSchema(schema);
-  console.log("dingo built schema", statement);
   return Promise.all(
     Object.keys(statement).map(async (key) => {
       console.log(`Initing Table: ${key}`);
-      await run(statement[key]);
+      await webDao.run(statement[key]);
       return;
     })
   );
 }
 
-async function handleApplies(messages = []) {
-  const db = await getDatabase();
-  console.log("dingo running handleAPplies", messages);
-
-  await messages.reduce(async (acc, curr) => {
-    console.log("dingo awaiting acc");
-    await acc;
-    console.log("dingo acc");
-    const sql = `SELECT * from ${curr.dataset} where id = '${curr.row}';`;
-    let row;
-    try {
-      row = await get(sql);
-    } catch (error) {
-      throw new Error(`Error: `, error);
-    }
-    console.log("HandleRow Set Row Dingo", row, curr);
-    if (!row || !row.length) {
-      const sql = `INSERT INTO ${curr.dataset}(id, ${curr.column}) VALUES ('${curr.row}', '${curr.value}');`;
-      console.log("dingo sql", sql);
-      try {
-        await run(sql, false);
-      } catch (error) {
-        throw new Error(`Error: `, error);
-      }
-    } else {
-      try {
-        const sql = `UPDATE ${curr.dataset} SET ${curr.column} = '${curr.value}' WHERE id = '${curr.row}' `;
-        await run(sql, false);
-      } catch (error) {
-        throw new Error(`Error: `, error);
-      }
-    }
-    return acc;
-  }, Promise.resolve());
-  console.log("Applied Message");
-  return true;
+async function handleApply(messages) {
+  await webDao.run("BEGIN TRANSACTION")
+  try {
+    messages.reduce(async (acc,curr) => {
+      let prevAcc = await acc;
+      const val = deserializeValue(curr.value);
+      prevAcc = await webDao.exec(
+        `INSERT INTO ${curr.dataset} (id, ${curr.column}) VALUES ('${
+          curr.row
+        }', ${
+          typeof val === "string" ? "'" + val + "'" : val
+        }) ON CONFLICT(id) DO UPDATE SET ${curr.column} = ${
+          typeof val === "string" ? "'" + val + "'" : val
+        } WHERE id = '${curr.row}'`
+      );
+      return prevAcc
+    }, Promise.resolve())
+  } catch (error) {
+    await webDao.run("ROLLBACK");
+    //TODO: Post response to failure ? self.postMessage({ type: "FAILED" });
+    throw new Error(`Error: ${error}`);
+  }
+  await webDao.run("COMMIT");
+  self.postMessage({ type: "APPLIED" });
 }
+
 
 let methods = {
   init,
@@ -340,41 +313,50 @@ let methods = {
 
 if (typeof self !== "undefined") {
   self.onmessage = async (msg) => {
+    let db;
     switch (msg.data.type) {
+      case "INIT_DATABASE":
+        await _init();
+        break;
       case "search":
         search(msg.data.name);
         break;
       case "db-run":
-        run(msg.data.sql);
+        await webDao.run(msg.data.sql)
         break;
-      case "db-apply":
-        try {
-          await handleApplies(msg.data.messages);
-        } catch (error) {
-          throw new Error(`Error :`, error);
-        }
-        const results = await get(
-          `SELECT * FROM ${msg.data.messages[0].dataset};`
-        );
-        console.log("dingo gotz results", results);
-        self.postMessage({ type: "applied-messages", results });
+      case "RUN_APPLY":
+        handleApply(msg.data.messages);
         break;
-      case "db-compare-messages":
-        handleCompare(msg.data.messages);
+      case "GET_MOST_RECENT_LOCAL_MESSAGES":
+        await handleGetMostRecent(msg.data.message);
+        break;
+      case "RUN_INSERT_MESSAGES":
+        await handleInsertMessages(msg.data.group_id, msg.data.message);
+        break;
+      case "GET_MERKLE":
+        let trie = await getMerkle(msg.data.group_id);
+        self.postMessage({ type: "MERKLE", results: trie });
         break;
       case "db-get-messages":
-        get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC");
+        await get("SELECT * FROM MESSAGES ORDER BY TIMESTAMP DESC");
         break;
-      case "db-get":
-        get(msg.data.sql);
+      case "SELECT_ALL":
+   
+        const selectResults = webDao.queryAll(msg.data.sql);
+        self.postMessage({ type: "SELECT", results: selectResults });
         break;
       case "db-init":
+        break;
+      case "db-sorted-messages":
+        const sortedMessages = webDao.queryAll(
+          `SELECT * FROM messages ORDER BY timestamp DESC`
+        );
+        self.postMessage({ type: "sorted-messages", sortedMessages });
         break;
       case "ui-invoke":
         if (methods[msg.data.name] == null) {
           throw new Error("Unknown method: " + msg.data.name);
         }
-        console.log('dingo running ui-invoke', msg.data)
         if (msg.data.arguments) {
           methods[msg.data.name](msg.data.arguments);
         } else {
@@ -386,7 +368,7 @@ if (typeof self !== "undefined") {
   };
 } else {
   for (let method of Object.keys(methods)) {
-    let btn = document.querySelector(`#${method}`);
+    let btn = document.querySelecsr(`#${method}`);
     if (btn) {
       btn.addEventListener("click", methods[method]);
     }

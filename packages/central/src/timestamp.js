@@ -45,7 +45,6 @@ class Timestamp {
   }
 
   static send(clock) {
-    console.log("dingo clock?", clock);
     // Retrieve the local wall time
     const phys = Date.now();
 
@@ -124,7 +123,6 @@ class Timestamp {
       throw new Timestamp.OverflowError();
     }
 
-    console.log("dingo setting clock", tNew, cNew);
     // Repack the logical time/counter
     clock.timestamp.setMillis(tNew);
     clock.timestamp.setCounter(cNew);

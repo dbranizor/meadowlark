@@ -1,23 +1,46 @@
-import { Timestamp } from "./timestamp";
-import * as merkle from "./merkle";
-import { writable } from "./store";
+import { Timestamp, MutableTimestamp } from "./timestamp.js";
+import * as merkle from "./merkle.js";
+import { writable } from "./store.js";
 import { makeClientId } from "./Utilities.mjs";
-import { buildSchema, insert, apply, sync } from "./database.js";
-import { setClock, makeClock } from "./clock.js";
+import { buildSchema, insert,_delete, apply, sync, registerApply, serializeValue, deserializeValue } from "./database.js";
+import { setClock, makeClock, getClock } from "./clock.js";
+import MessageBus from "./message-bus.js";
 import { bootstrap, getWorker } from "./datastores.js";
-import DatastoreState from "./datastore-state"
+import DatastoreState from "./datastore-state.js";
 import Environment from "./environment-state.js";
-const start = () =>
-  setClock(makeClock(new Timestamp(0, 0, makeClientId(true))));
-const environment = {};
-const setEnvironment = (env) => Environment.set(env);
+import WebDao from "./webSql.js"
+const startDatabase = async () => {
+  getWorker()
+  return new Promise((res, rej) => {
+    window.worker.postMessage({type: "INIT_DATABASE"})
+    window.worker.addEventListener("message", (e) => {
+      if(e.data.type === "INITIALIZED_DB"){
+        return res(true)
+      }
+    })
+  })
+}
+const startClock = async () => {
+  const c = await makeClock(new Timestamp(0, 0, makeClientId(true)));
+  return setClock(c);
+}
+  
+let environment = {};
+
+const setEnvironment = (e) => {
+  Environment.set(e)
+  // Environment.update((env) => {
+  //   const oldEnv = JSON.parse(JSON.stringify(env));
+  //   const newEnv = Object.assign(oldEnv, { ...e });
+  //   return newEnv;
+  // });
+};
 Environment.subscribe((env) => (environment = env));
 
 let syncInterval;
 function startSync() {
   syncInterval = setInterval(async () => {
     try {
-      console.log("dingo Running Sync");
       await sync();
       Environment.update((env) => Object.assign(env, { isOffline: false }));
     } catch (e) {
@@ -37,28 +60,35 @@ function stopSync() {
 
 function select(sql) {
   return new Promise((res, rej) => {
-    console.log("dingo selecting", sql, window.worker);
-    window.worker.postMessage({ type: "db-get", sql });
-    window.worker.onmessage = function (e) {
-      if (e.data.type === "results") {
-        console.log("dingo selecting results", e.data, e.data.results);
+    window.worker.postMessage({ type: "SELECT_ALL", sql });
+    window.worker.addEventListener("message", function (e) {
+      if (e.data.type === "SELECT") {
         return res(e.data.results);
       }
-    };
+    });
   });
 }
 
 export {
+  startDatabase,
   startSync,
   stopSync,
   Environment,
+  MutableTimestamp,
   Timestamp,
   merkle,
   makeClientId,
+  WebDao,
   buildSchema,
   DatastoreState,
+  registerApply,
+  MessageBus,
+  serializeValue,
+  deserializeValue,
+  _delete,
+  getClock,
   insert,
-  start,
+  startClock,
   writable,
   sync,
   select,

@@ -2,13 +2,12 @@
 
 <script>
   import { onMount } from "svelte";
-  import { start, setEnvironment } from "@meadowlark-labs/central";
+  import { sync } from "@meadowlark-labs/central";
   import Navbar from "./Navbar.svelte";
-  import EnvironmentState from "@meadowlark-labs/central/src/environment-state";
   import Messages from "./components/messages/Messages.svelte";
-  import { localized } from "./bootup.js";
+  import { santaFe } from "./bootup.js";
 
-  start();
+  //start();
   const schema = {
     events: {
       id: "TEXT",
@@ -40,23 +39,21 @@
     { id: "John", display: "John" },
     { id: "George", display: "George" },
     { id: "Paul", display: "Paul" },
-    { id: "Ringo", display: "Ringo" },
+    { id: "Ringo", display: "Rifngo" },
   ];
 
   let selectedUser = testUsers[1].display;
   let centralConfig = {
     user_id: selectedUser,
-    syncDisabled: false,
-    syncUrl: "https://localhost/central-park",
+    sync_disabled: false,
+    sync_url: "https://localhost/central-park",
     group_id: "meadowlark",
     debug: true,
+    localized: ["Message"],
     isOffline: true,
   };
-  EnvironmentState.subscribe((e) => {
-    console.log("dingo got environment sub update", e);
-    centralConfig = Object.assign(centralConfig, e);
-  });
-  setEnvironment(centralConfig);
+
+  // setEnvironment(centralConfig);
 
   export let name;
 
@@ -64,46 +61,25 @@
     if (newType) {
     }
   }
-  const handleNewMessage = (e) => {
+  const handleNewMessage = async (e) => {
     if (e.code === "Enter") {
-      console.log("dingo adding new message");
-      const event = { cat: newType, msg: newMessage };
-      displayedEvents = [...displayedEvents, event];
+      if (newMessage) {
+        const event = { cat: newType, msg: newMessage };
+        displayedEvents = [...displayedEvents, event];
+      } else {
+        sync();
+      }
     }
   };
 
   function handleEnableSync(event) {
     console.log("Got Call to Enable Sync", event);
-    // sync();
-    // const isOffline = !centralConfig.isOffline;
-    // const syncDisabled = !centralConfig.syncDisabled;
-    // console.log(
-    //   "DINGO RUNNIJNG INTERVAL FUNCTION",
-    //   syncDisabled,
-    //   centralConfig.syncDisabled,
-    //   isOffline,
-    //   centralConfig.isOffline,
 
-    // );
-
-    // EnvironmentState.update((env) => {
-    //   const newConfig = Object.assign(env, { isOffline, syncDisabled });
-    //   console.log("dingo updating config", newConfig);
-    //   return newConfig;
-    // });
-    // if (syncDisabled) {
-    //   console.log("stopping sync");
-    //   stopSync();
-    // } else {
-    //   console.log("starting sync", isOffline);
-    //   startSync();
-    // }
   }
   onMount(async () => {
     /**Test dingo code*/
     displayedEvents = [...events];
-
-    await localized("Message");
+    santaFe(centralConfig);
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
@@ -143,7 +119,7 @@
     <div class="flex">
       <select
         bind:value={selectedUser}
-        on:change={() => setEnvironment(centralConfig)}
+        on:change={() => santaFe(centralConfig, false)}
       >
         {#each testUsers as user}
           <option value={user}>{user.display}</option>
@@ -163,7 +139,10 @@
         />
       </div>
     </div>
-    <Messages messages={displayedEvents} />
+    <Messages
+      on:MESSAGES_APPLIED={() => (newMessage = "")}
+      messages={displayedEvents}
+    />
     <!-- <TestTables /> -->
   </div>
 </main>

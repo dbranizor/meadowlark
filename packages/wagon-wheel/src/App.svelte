@@ -20,13 +20,11 @@
       throw new Error(error);
     }
     dbstate = await response.json();
-    console.log("dingo database state", dbstate);
     rows = dbstate.data.messages;
     if(dbstate.data.merkle.hash){
       hash = dbstate.data.merkle.hash;
     }
-    
-    console.log("dingo rows", rows);
+
   });
 
   const columns = [

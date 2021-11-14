@@ -9,7 +9,7 @@
   "main": "lib/central.js",
   "directories": {
     "lib": "lib",
-    "test": "__tests__"
+    "test": "__tests__/database.test.mjs"
   },
   "files": [
     "lib"
@@ -18,7 +18,7 @@
     "preBuild": "npx rollup rollup.webworker.config.js -c",
     "build": "npx rollup -c",
     "tsc": "tsc",
-    "test": "jest"
+    "test": "jest __tests__/database.test.mjs"
   },
   "gitHead": "969ded91ddfb9d8b733b37a8afd7587b896b4cca",
   "dependencies": {
