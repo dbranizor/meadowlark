@@ -1,4 +1,4 @@
-import { writable } from "./store";
+import { writable } from "./store.js";
 
 const initMessageBus = () => {
   const { set, update, subscribe } = writable({});

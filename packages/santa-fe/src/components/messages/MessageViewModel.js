@@ -40,15 +40,12 @@ const InitMessageViewModel = () => {
       });
     },
     async addBatch(messages) {
-      console.log("dingo is sync ready?", this.syncReady);
       if (this.syncReady) {
-        console.log("dingo starting message message apply");
         await messages.reduce(async (acc, curr) => {
           const prevAcc = await acc;
           await this.add(curr);
           return prevAcc;
         }, Promise.resolve());
-        console.log("dingo ending message apply");
       }
     },
     refresh() {
@@ -59,6 +56,9 @@ const InitMessageViewModel = () => {
     },
     async add(message) {
       await MessageModel.insert(message);
+    },
+    delete(id) {
+       MessageModel.delete(id)
     },
     unsubscribe() {
       unsubscribes.forEach((f) => f());

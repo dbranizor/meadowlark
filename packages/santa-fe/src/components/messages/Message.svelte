@@ -1,11 +1,13 @@
 <script>
+import { makeClientId } from "@meadowlark-labs/central/src/central";
+
 export let displayedEvents
 import { createEventDispatcher } from "svelte";
 import { v4 } from "uuid";
 
 export let type = "info";
 export let display = false;
-export let id = v4();
+export let id = makeClientId();
 const dispatch = createEventDispatcher();
 
 const styles = {
@@ -74,7 +76,7 @@ const styles = {
   <div
     style="color: #596a73 !important;"
     class="absolute top-0 right-0 m-2 cursor-pointer"
-    on:click={() => dispatch("CLEAR_TOASTER")}
+    on:click={() => dispatch("CLEAR_TOASTER", id)}
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"

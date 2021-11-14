@@ -19,7 +19,6 @@
   }
 
   async function applyMessages() {
-    console.log("dingo adding messages", messages);
     const n = messages.filter((e) => !applliedMessages.includes(e));
     try {
       await MessageViewModel.addBatch(n);
@@ -47,11 +46,11 @@
   <ul>
     {#each displayedMessages as event}
       <li>
-        <Message type="info" display={true} id={event.type}>
+        <Message on:CLEAR_TOASTER={(e) => MessageViewModel.delete(event.id)} type="info" display={true} id={event.type}>
           <span slot="header">
-            {event.cat}
+            {event.cat} 
           </span>
-          <span slot="body">{event.msg}</span>
+          <span slot="body">{event.msg} {event.id}</span>
         </Message>
       </li>
     {/each}

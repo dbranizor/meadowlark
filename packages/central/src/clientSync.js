@@ -18,13 +18,11 @@ unsubscribes.push(
 
 const tempGetWorkerInClientSync = () => {
   const worker = getWorker();
-  console.log("dingo is this worker real?", worker);
 };
 
 
 
 async function post(data) {
-  console.log("diongo running fetch", environment, environment.user_id);
   let res = await fetch(`${environment.sync_url}/sync`, {
     method: "POST",
     mode: "cors",
@@ -51,7 +49,6 @@ function receiveMessages(messages = []) {
   apply(messages);
 }
 async function sync(initialMessages = [], since = null) {
-  console.log("dingo running sync", environment);
   if (!environment.syncEnabled) {
     return;
   }
@@ -89,15 +86,12 @@ async function sync(initialMessages = [], since = null) {
           "This is an internal error that shouldn't happen"
       );
     }
-
-    console.log("dingo returning");
     return sync([], diffTime);
   }
 }
 
 const buildSchema = (data) => {
   return Object.keys(data).reduce((acc, curr) => {
-    console.log("dingo building data $$$$$ &&&*& ", data, curr);
     const tableNames = Object.keys(data[curr]);
     const tableValues = Object.values(data[curr]);
     const statement = tableNames.reduce((acc, scurr, ix) => {
@@ -132,7 +126,6 @@ const insert = (table, row) => {
   });
 
   apply(messages);
-  // console.log("dingo object", messages);
   // messages.forEach((m) => {
   // const sql = `INSERT INTO messages (dataset, row, column, value, timestamp) VALUES ('${m.dataset}', '${m.row}', '${m.column}', '${m.value}', '${m.timestamp}')`;
   // worker.postMessage({ type: "db-run", sql });

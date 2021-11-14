@@ -11,9 +11,7 @@ const unsubscribes = [];
 unsubscribes.push(
   Environment.subscribe((e) => {
     environment = e;
-    console.log("dingo got environment --> !!", e, e.group_id);
     if (!objIsEmpty && e.group_id) {
-      console.log("dingo setting groupID", e.group_id);
       _group_id = e.group_id;
     }
   })

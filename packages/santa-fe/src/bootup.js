@@ -48,7 +48,6 @@ const _localized = async function (components) {
         const argument = curr[1];
         await MessageCatalog[component].init(argument);
       } else {
-        console.log("dingo localized called", curr);
         await MessageCatalog[curr].init();
       }
       return prev;

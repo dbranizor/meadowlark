@@ -64,7 +64,6 @@
   const handleNewMessage = async (e) => {
     if (e.code === "Enter") {
       if (newMessage) {
-        console.log("dingo adding new message");
         const event = { cat: newType, msg: newMessage };
         displayedEvents = [...displayedEvents, event];
       } else {
@@ -75,30 +74,7 @@
 
   function handleEnableSync(event) {
     console.log("Got Call to Enable Sync", event);
-    // sync();
-    // const isOffline = !centralConfig.isOffline;
-    // const syncDisabled = !centralConfig.syncDisabled;
-    // console.log(
-    //   "DINGO RUNNIJNG INTERVAL FUNCTION",
-    //   syncDisabled,
-    //   centralConfig.syncDisabled,
-    //   isOffline,
-    //   centralConfig.isOffline,
 
-    // );
-
-    // EnvironmentState.update((env) => {
-    //   const newConfig = Object.assign(env, { isOffline, syncDisabled });
-    //   console.log("dingo updating config", newConfig);
-    //   return newConfig;
-    // });
-    // if (syncDisabled) {
-    //   console.log("stopping sync");
-    //   stopSync();
-    // } else {
-    //   console.log("starting sync", isOffline);
-    //   startSync();
-    // }
   }
   onMount(async () => {
     /**Test dingo code*/

@@ -13,29 +13,18 @@ const InitDataStore = () => {
         storeNames.map((st) =>
           update((sch) => {
             sch[st] = [];
-            console.log("dingo updating schema single", sch);
             return sch;
           })
         );
       } else {
         update((sch) => {
           sch[schema] = [];
-          console.log("dingo updating schema single", sch);
           return sch;
         });
       }
     },
     addRecord(store, record) {
       return update((sch) => {
-        console.log(
-          "dingo currRecords added to store same value",
-          Object.assign(
-            { ...sch },
-            {
-              [store]: [...sch[store], record],
-            }
-          )
-        );
         return Object.assign(
           { ...sch },
           {

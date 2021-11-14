@@ -22,11 +22,8 @@ const InitMessageState = function () {
   const methods = {
     init: async function (schema) {
       const messageStateSchema = messageSchema;
-      console.log("dingo message state running update");
       await bootstrap(messageStateSchema);
-      console.log("dingo message state ran update");
       return SyncReady.update((sync) => {
-        console.log("dingo messate state sync being set", sync);
         return true;
       });
     },
@@ -43,7 +40,6 @@ const InitMessageState = function () {
 
         return msg;
       });
-      console.log("dingo got inserted record", record);
     },
   };
   return {
