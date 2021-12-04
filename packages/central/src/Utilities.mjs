@@ -3,6 +3,15 @@ let config = {};
 const logger = (config = { logging: "debug" }) =>
   config.logging === "debug" ? console.log : () => {};
 
+function debounce(func, timeout = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
+  };
+}
 const objIsEmpty = (obj) => {
   if (!obj) {
     return null;
@@ -41,4 +50,4 @@ const makeClientId = (wDashes = false) => {
   return v4().replace(/-/g, "").slice(-16);
 };
 
-export { logger, makeClientId, objIsEmpty };
+export { logger, makeClientId, objIsEmpty, debounce };

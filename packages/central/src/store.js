@@ -10,8 +10,10 @@ export const writable = (initial_value = 0) => {
 
   const set = (new_value) => {
     if (JSON.stringify(value) === JSON.stringify(new_value)) {
+      console.error("Passed Same Data Through", new_value, value);
       return;
     } // same value, exit
+    console.log('Updating Store', new_value, value)
     value = new_value; // update value
     subs.forEach((sub) => sub(value)); // update subscribers
   };

@@ -18,10 +18,19 @@ unsubscribes.push(
 );
 
 function setClock(clock) {
+  localStorage.setItem("clock", JSON.stringify(clock));
   _clock = clock;
 }
 
 function getClock() {
+  if (!_clock) {
+    var cachedClock = localStorage.getItem("clock");
+    if (cachedClock) {
+      const clock = JSON.parse(cachedClock);
+      setClock(_clock);
+      return clock;
+    }
+  }
   return _clock;
 }
 

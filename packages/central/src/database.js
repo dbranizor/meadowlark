@@ -6,12 +6,23 @@ import Environment from "./environment-state.js";
 import MessageState from "./messages-state.js";
 import { getWorker } from "./datastores.js";
 import { EVENTS } from "./enum.js";
+import MeadoCrypto from "./MeadoCrypto.js";
 
 let environment = {};
 let messages = [];
 let unsubscribes = [];
+let meadoCrypto;
 unsubscribes.push(
-  Environment.subscribe((e) => (environment = e)),
+  Environment.subscribe(async (e) => {
+    environment = e;
+    if (e.encryption) {
+      meadoCrypto = new MeadoCrypto();
+      await meadoCrypto.setKey();
+      await meadoCrypto.setURL(environment.sync_url);
+      const eStuff = await meadoCrypto.encrypt("stuff");
+      console.log("dingo");
+    }
+  }),
   MessageState.subscribe((m) => (messages = m))
 );
 
@@ -183,7 +194,7 @@ async function applyMessages(incomingMessages) {
       // `apply()` means that we're going to actually update our local data
       // store with the operation contained in the message.
       appliedMessages = [...appliedMessages, incomingMsgForField];
-    } 
+    }
 
     // If this is a new message that we don't have locally (i.e., we didn't find
     // a corresponding local message for the same dataset/row/column OR we did
@@ -228,7 +239,7 @@ async function getSortedMessages() {
 }
 
 async function sync(initialMessages = [], since = null) {
-  console.log('Running Sync ', since)
+  console.log("Running Sync ", since);
   if (environment.syncDisabled) {
     return;
   }
@@ -253,12 +264,11 @@ async function sync(initialMessages = [], since = null) {
       merkle: getClock().merkle,
     });
   } catch (e) {
-    throw new Error("network-failure");
+    throw new Error(`network-failure: ${e}`);
   }
 
-
   if (result.messages.length > 0) {
-   await receiveMessages(
+    await receiveMessages(
       result.messages.map((m) => ({ ...m, value: serializeValue(m.value) }))
     );
   }
@@ -299,6 +309,22 @@ const buildSchema = (data) => {
   }, {});
 };
 
+const update = async (table, row) => {
+  let fields = Object.keys(row).filter((r) => r !== "id");
+  sendMessages(
+    fields.map((f) => ({
+      dataset: table,
+      row: row.id,
+      column: f,
+      value: serializeValue(row[f]),
+      // Note that every message we create/send gets its own, globally-unique
+      // timestamp. In effect, there is a 1-1 relationship between the time-
+      // stamp and this specific message.
+      timestamp: Timestamp.send(getClock()).toString(),
+    }))
+  );
+};
+
 const insert = async (table, row) => {
   const id = makeClientId(true);
   const fields = Object.keys(row);
@@ -324,11 +350,9 @@ const insert = async (table, row) => {
     },
   ];
 
-
   sendMessages(messages);
 
   return id;
-
 };
 
 const _delete = (table, id) => {
@@ -353,6 +377,7 @@ export {
   buildSchema,
   insert,
   _delete,
+  update,
   apply,
   receiveMessages,
   registerApply,

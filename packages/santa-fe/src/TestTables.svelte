@@ -1,11 +1,20 @@
 <script>
+  import { makeClientId } from "@meadowlark-labs/central";
+  import { onMount } from "svelte";
+import Actions from "./components/tables/Actions.svelte";
+
+  import TableViewModel from "./components/tables/TableViewModel";
+
   const { default: Tables } = require("./components/tables/Tables.svelte");
 
-  const rows = [
-    { id: 1, first_name: "Marilyn", last_name: "Monroe", gender: "female" },
-    { id: 2, first_name: "Abraham", last_name: "Lincoln", gender: "male" },
-    { id: 3, first_name: "Mother", last_name: "Teresa", gender: "female" },
-    { id: 4, first_name: "John F.", last_name: "Kennedy", gender: "male" },
+  let person = {};
+  const unsubscribes = [];
+
+  let rows = [
+    // { id: 1, first_name: "Marilyn", last_name: "Monroe", gender: "female" },
+    // { id: 2, first_name: "Abraham", last_name: "Lincoln", gender: "male" },
+    // { id: 3, first_name: "Mother", last_name: "Teresa", gender: "female" },
+    // { id: 4, first_name: "John F.", last_name: "Kennedy", gender: "male" },
     // { id: 5, first_name: "Martin Luther", last_name: "King", gender: "male" },
     // { id: 6, first_name: "Nelson", last_name: "Mandela", gender: "male" },
     // { id: 7, first_name: "Winston", last_name: "Churchill", gender: "male" },
@@ -28,7 +37,23 @@
     // { id: 19, first_name: "Pope", last_name: "Francis", gender: "male" },
   ];
 
+  const schema = {
+    People: {
+      id: "TEXT PRIMARY KEY",
+      first_name: "TEXT",
+      last_name: "TEXT",
+      gender: "TEXT",
+    },
+  };
   const columns = [
+    {
+      key: "actions",
+      title: "",
+      renderComponent: {
+        component: Actions,
+        props: 'delete'
+      }
+    },
     {
       key: "id",
       title: "ID",
@@ -116,11 +141,34 @@
       filterOptions: ["male", "female"], // provide array
     },
   ];
-
-  
 </script>
 
-<Tables name="test_people" {rows} {columns} isLocalized={true} />
+<div class="w-full flex">
+  <div class="flex-1 w-1/2 justify-center items-center">
+    <input
+      type="text"
+      bind:value={person.first_name}
+      placeholder="First Name"
+    />
+    <input type="text" bind:value={person.last_name} placeholder="Last Name" />
+    <input type="text" bind:value={person.gender} placeholder="Gender" />
+    <button
+      class="py-2 px-1 bg-blue-500 text-gray-200 rounded hover:bg-blue-700"
+      on:click={() => {
+        person.id = makeClientId();
+        rows = [...rows, person];
+      }}>Submit</button
+    >
+  </div>
+</div>
+<Tables
+  on:DELETE={(e) => console.log("Caught Output From Tables", e.detail)}
+  name="People"
+  {rows}
+  {columns}
+  {schema}
+  isLocalized={true}
+/>
 
 <style>
 </style>

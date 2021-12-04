@@ -1,39 +1,49 @@
 import { Timestamp, MutableTimestamp } from "./timestamp.js";
 import * as merkle from "./merkle.js";
 import { writable } from "./store.js";
-import { makeClientId } from "./Utilities.mjs";
-import { buildSchema, insert,_delete, apply, sync, registerApply, serializeValue, deserializeValue } from "./database.js";
+import { makeClientId,debounce } from "./Utilities.mjs";
+import {
+  buildSchema,
+  insert,
+  _delete,
+  apply,
+  sync,
+  registerApply,
+  serializeValue,
+  deserializeValue,
+  update,
+} from "./database.js";
 import { setClock, makeClock, getClock } from "./clock.js";
 import MessageBus from "./message-bus.js";
 import { bootstrap, getWorker } from "./datastores.js";
 import DatastoreState from "./datastore-state.js";
 import Environment from "./environment-state.js";
-import WebDao from "./webSql.js"
+import MeadoCrypto from "./MeadoCrypto.js";
+import WebDao from "./webSql.js";
+
+
+
 const startDatabase = async () => {
-  getWorker()
+  getWorker();
   return new Promise((res, rej) => {
-    window.worker.postMessage({type: "INIT_DATABASE"})
+    window.worker.postMessage({ type: "INIT_DATABASE" });
     window.worker.addEventListener("message", (e) => {
-      if(e.data.type === "INITIALIZED_DB"){
-        return res(true)
+      if (e.data.type === "INITIALIZED_DB") {
+        return res(true);
       }
-    })
-  })
-}
+    });
+  });
+};
 const startClock = async () => {
   const c = await makeClock(new Timestamp(0, 0, makeClientId(true)));
   return setClock(c);
-}
-  
+};
+
 let environment = {};
+let meadoCrypto;
 
 const setEnvironment = (e) => {
-  Environment.set(e)
-  // Environment.update((env) => {
-  //   const oldEnv = JSON.parse(JSON.stringify(env));
-  //   const newEnv = Object.assign(oldEnv, { ...e });
-  //   return newEnv;
-  // });
+  Environment.set(e);
 };
 Environment.subscribe((env) => (environment = env));
 
@@ -75,6 +85,7 @@ export {
   stopSync,
   Environment,
   MutableTimestamp,
+  MeadoCrypto,
   Timestamp,
   merkle,
   makeClientId,
@@ -82,8 +93,10 @@ export {
   buildSchema,
   DatastoreState,
   registerApply,
+  debounce,
   MessageBus,
   serializeValue,
+  update,
   deserializeValue,
   _delete,
   getClock,

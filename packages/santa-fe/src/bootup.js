@@ -1,5 +1,5 @@
 import Message from "./components/messages/MessageViewModel.js";
-import Table from "./components/tables/table-state.js";
+import Table from "./components/tables/TableViewModel.js";
 import {
   setEnvironment,
   startClock,
@@ -7,15 +7,17 @@ import {
   startDatabase,
 } from "@meadowlark-labs/central";
 import messageViewModel from "./components/messages/MessageViewModel.js";
+import TableViewModel from "./components/tables/TableViewModel.js";
 const MessageCatalog = {
   Message,
   Table,
 };
 
 const applyFunc = () => {
-  messageViewModel.refresh();
+  TableViewModel.refresh();
+  // messageViewModel.refresh();
 };
-const santaFe = (
+const santaFe = async (
   { localized, group_id, user_id, syncDisabled, sync_url, debug, isOffline },
   init = true
 ) => {
@@ -26,19 +28,30 @@ const santaFe = (
     sync_url,
     debug,
     isOffline,
+    encryption: true,
   });
   if (init) {
     registerApply(applyFunc);
-    startDatabase()
-      .then(() =>  _localized(...localized))
-      .then(() => startClock());
+    try {
+      console.log("starting Database");
+      await startDatabase();
+      console.log("starting localized");
+      await _localized(...localized);
+      console.log("staring clock");
+      await startClock();
+      console.log("Finished Initializing");
+    } catch (error) {
+      console.error("Error Initializing");
+      console.log("dingo starting clock");
+      startClock();
+    }
+
     /**Setup local database */
     // start().then(() => _localized(...localized));
   }
 };
 
 const _localized = async function (components) {
-  
   return new Promise(async (res, rej) => {
     const args = Array.prototype.slice.call(arguments);
     await args.reduce(async (acc, curr) => {

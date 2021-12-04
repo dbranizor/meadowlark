@@ -1,32 +1,76 @@
 <script>
   import { insert } from "@meadowlark-labs/central";
   import { onMount } from "svelte";
-
+  import TableViewModel from "./TableViewModel.js";
   import { santaFe } from "../../bootup";
   import Table from "./Table.svelte";
+  import { Components } from "../../enum.js";
+  import TableStore from "./TableStore.js";
+
   export let name = "table";
   export let columns = [];
   export let rows = [];
-  export let coi;
+  export let schema = {};
   export let isLocalized;
+  let displayedRows = [];
+  const unsubscribes = [];
+  let appliedRows = [];
 
-  let tableQuery = `select * from ${name} join ${name}_columns on ${name}.id = ${name}_columns.table_id  where tombstone <> 1`;
+  $: if (rows && rows.length) {
+    applyRows();
+  }
+
+  onMount(() => {
+    TableViewModel.syncReady$.subscribe((r) => {
+      if (r) {
+        unsubscribes.push(
+          TableViewModel.subscribe((t) => {
+            console.log("Tables Picked Up Update. Refresh UI");
+            displayedRows = t;
+          }),
+          TableViewModel.refresh(),
+          TableStore.selected$.subscribe((v) => {
+            const id = Object.keys(v)[0];
+            if (v[id]) {
+              console.log("dingo updated cell value", v, v[id]);
+              console.log("dingo updated cell value", v, v[id]);
+              TableViewModel.update(v[id], name);
+            }
+          })
+        );
+      }
+    });
+  });
+
+  async function applyRows() {
+    const n = rows.filter((r) => !appliedRows.includes(r));
+    try {
+      await TableViewModel.addBatch(n, name);
+    } catch (error) {
+      throw new Error(`Error: ${error}`);
+    }
+    appliedRows = [...appliedRows, ...n];
+  }
+
+  let testUsers = [
+    { id: "John", display: "John" },
+    { id: "George", display: "George" },
+    { id: "Paul", display: "Paul" },
+    { id: "Ringo", display: "Rifngo" },
+  ];
+
+  let selectedUser = testUsers[1].display;
 
   const handleLocalized = async () => {
-    const colSchema = columns.reduce((acc, curr) => {
-      acc[curr.key] = curr.type;
-      return acc;
-    }, {});
-    const tableSchema = {
-      [name]: {
-        id: "text",
-        coi: "text",
-        key: "text",
-      },
-      [`${name}_columns`]: { ...colSchema, table_id: "text" },
-    };
-    const schema = { [name]: { ...tableSchema } };
-    return await santaFe({localized: [["Table", tableSchema]]});
+    return await santaFe({
+      localized: [[Components.TABLES, schema]],
+      user_id: selectedUser,
+      sync_disabled: false,
+      sync_url: "https://localhost/central-park",
+      group_id: "meadowlark",
+      debug: true,
+      isOffline: true,
+    });
   };
 
   onMount(() => {
@@ -41,4 +85,4 @@
   });
 </script>
 
-<Table {rows} {columns} />
+<Table rows={displayedRows} {columns} editable={true} />

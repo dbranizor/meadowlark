@@ -6,6 +6,8 @@
   import Navbar from "./Navbar.svelte";
   import Messages from "./components/messages/Messages.svelte";
   import { santaFe } from "./bootup.js";
+  import Modal from "./components/shared/Modal.svelte";
+import TestTables from "./TestTables.svelte";
 
   //start();
   const schema = {
@@ -31,7 +33,9 @@
   let newType = "";
   let newMessage = "";
   let worker;
+  let showEncModal = false;
   let interval;
+  let encryptionModalName = "EncryptionModal";
 
   const unsubscribes = [];
 
@@ -74,12 +78,12 @@
 
   function handleEnableSync(event) {
     console.log("Got Call to Enable Sync", event);
-
   }
+
   onMount(async () => {
     /**Test dingo code*/
     displayedEvents = [...events];
-    santaFe(centralConfig);
+    // santaFe(centralConfig);
 
     // Sync.init({syncHost: "https://192.168.1.11/central-park", logging: "debug"})
     // Sync.addSchema({
@@ -98,6 +102,12 @@
     <Navbar class="bg-gray-500 text-gray-200">
       <span slot="name"> Santa-Fe </span>
       <div slot="links" class="flex">
+        <button
+          class="bg-transparent border-gray-500 border-2 hover:bg-blue-100"
+          on:click={() => (showEncModal = !showEncModal)}
+        >
+          Encrypt
+        </button>
         <button
           on:click={handleEnableSync}
           class="h-5 {centralConfig.syncDisabled
@@ -143,8 +153,29 @@
       on:MESSAGES_APPLIED={() => (newMessage = "")}
       messages={displayedEvents}
     />
-    <!-- <TestTables /> -->
+ `   <TestTables />`
   </div>
+  <Modal bind:val={showEncModal}>
+    <span slot="body">
+      Invite Team-Members to an Encrypted Application Channel. 
+    </span>
+    <span slot="actions" class="flex items-center justify-end p-6 border-t border-solid border-blueGray-200 rounded-b">
+      <button
+        class="text-tprimary background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+        type="button"
+        on:click={() => showEncModal = false}
+      >
+        Close
+      </button>
+      <button
+        class="bg-background-primary text-tprimary active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+        type="button"
+        on:click={() => showEncModal = false}
+      >
+        Start Encrypted Channel
+      </button>
+    </span>
+  </Modal>
 </main>
 
 <style>
