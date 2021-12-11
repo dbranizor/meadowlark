@@ -51,7 +51,6 @@ async function _init() {
   if (!webDao._db) {
     await webDao.init(initSqlJs);
     await webDao.open();
-    console.log("Dingo opened");
   }
   await webDao.exec(sqlMessages);
   await webDao.exec(sqlMessageMerkles);
@@ -224,11 +223,14 @@ async function handleInsertMessages(group_id, messages) {
       }
     }
 
-    console.log('dingo adding webDao to messages_merkles', trie, messages)
-    const ms = webDao.prepare(
-      `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`
-    );
-    await webDao.runPrepare(ms, [group_id, JSON.stringify(trie)]);
+    if(messages.length){
+      console.log('dingo adding webDao to messages_merkles', trie, messages)
+      const ms = webDao.prepare(
+        `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`
+      );
+      await webDao.runPrepare(ms, [group_id, JSON.stringify(trie)]);
+  
+    }
 
     await webDao.exec("COMMIT");
   } catch (error) {

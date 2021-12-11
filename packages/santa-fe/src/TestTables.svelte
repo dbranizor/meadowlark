@@ -7,7 +7,10 @@ import Actions from "./components/tables/Actions.svelte";
 
   const { default: Tables } = require("./components/tables/Tables.svelte");
 
-  let person = {};
+  let lastName;
+  let firstName;
+  let gender;
+  
   const unsubscribes = [];
 
   let rows = [
@@ -150,16 +153,16 @@ import Actions from "./components/tables/Actions.svelte";
   <div class="flex-1 w-1/2 justify-center items-center">
     <input
       type="text"
-      bind:value={person.first_name}
+      bind:value={firstName}
       placeholder="First Name"
     />
-    <input type="text" bind:value={person.last_name} placeholder="Last Name" />
-    <input type="text" bind:value={person.gender} placeholder="Gender" />
+    <input type="text" bind:value={lastName} placeholder="Last Name" />
+    <input type="text" bind:value={gender} placeholder="Gender" />
     <button
       class="py-2 px-1 bg-blue-500 text-gray-200 rounded hover:bg-blue-700"
       on:click={() => {
-        person.id = makeClientId();
-        rows = [...rows, person];
+        const id = makeClientId();
+        rows = [...rows, {last_name: lastName, first_name: firstName, gender, id}];
       }}>Submit</button
     >
   </div>
