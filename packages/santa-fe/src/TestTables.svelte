@@ -51,7 +51,10 @@ import Actions from "./components/tables/Actions.svelte";
       title: "",
       renderComponent: {
         component: Actions,
-        props: 'delete'
+        props: {
+          delete: true,
+          dataset: 'People'
+        }
       }
     },
     {

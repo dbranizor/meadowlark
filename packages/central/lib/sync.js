@@ -48,10 +48,10 @@ const encryptionUsers = `CREATE TABLE IF NOT EXISTS encryption_user (USER TEXT P
 const webDao = new WebDao();
 
 async function _init() {
-  if(!webDao._db){
+  if (!webDao._db) {
     await webDao.init(initSqlJs);
     await webDao.open();
-    console.log('Dingo opened')
+    console.log("Dingo opened");
   }
   await webDao.exec(sqlMessages);
   await webDao.exec(sqlMessageMerkles);
@@ -231,7 +231,8 @@ async function handleInsertMessages(group_id, messages) {
 
     await webDao.exec("COMMIT");
   } catch (error) {
-    await webDao.exec("ROLLBACK");
+    // await webDao.exec("ROLLBACK");
+    console.ERROR("ERROR NEED TO ROLLBACK BUT CAN'T!!!", error);
     throw error;
   }
 
@@ -278,8 +279,9 @@ async function handleApply(messages) {
       return prevAcc;
     }, Promise.resolve());
   } catch (error) {
-    await webDao.run("ROLLBACK");
-    //TODO: Post response to failure ? self.postMessage({ type: "FAILED" });
+    console.error(`Error Need to Rollback but Can't ${error}`)
+    // await webDao.run("ROLLBACK");
+    // //TODO: Post response to failure ? self.postMessage({ type: "FAILED" });
     throw new Error(`Error: ${error}`);
   }
   await webDao.run("COMMIT");
@@ -330,7 +332,7 @@ if (typeof self !== "undefined") {
           );
         } catch (error) {
           console.error(`Unable to Save Encryption URL: ${error}`);
-          webDao.exec("ROLLBACK");
+          // webDao.exec("ROLLBACK");
         }
         webDao.exec("COMMIT");
         self.postMessage({ type: "ENCRYPTION_URL" });
