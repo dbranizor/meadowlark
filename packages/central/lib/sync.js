@@ -224,6 +224,7 @@ async function handleInsertMessages(group_id, messages) {
       }
     }
 
+    console.log('dingo adding webDao to messages_merkles', trie, messages)
     const ms = webDao.prepare(
       `INSERT OR REPLACE INTO messages_merkles(group_id, merkle)values(?,?)`
     );
@@ -232,7 +233,7 @@ async function handleInsertMessages(group_id, messages) {
     await webDao.exec("COMMIT");
   } catch (error) {
     // await webDao.exec("ROLLBACK");
-    console.ERROR("ERROR NEED TO ROLLBACK BUT CAN'T!!!", error);
+    console.error("ERROR NEED TO ROLLBACK BUT CAN'T!!!", error);
     throw error;
   }
 
