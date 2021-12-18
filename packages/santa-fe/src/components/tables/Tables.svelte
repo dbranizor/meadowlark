@@ -16,10 +16,8 @@
   const unsubscribes = [];
   let appliedRows = [];
 
-  $: if (rows && rows.length) {
-    applyRows();
-  }
-
+  $:rows, applyRows(),
+   
   onMount(() => {
     TableViewModel.syncReady$.subscribe((r) => {
       if (r) {
