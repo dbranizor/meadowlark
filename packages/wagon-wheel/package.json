@@ -4,20 +4,28 @@
   "private": true,
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "build:tailwind": "postcss css/tailwind.css -o public/tailwind-out.css",
+    "dev": "http-server public -p 8001",
     "start": "sirv public -p 8001 --no-clear"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
+    "css-loader": "^6.5.1",
+    "http-server": "^14.0.0",
+    "postcss": "^8.3.6",
+    "postcss-cli": "^8.3.1",
+    "postcss-load-config": "^3.1.0",
     "rollup": "^2.3.4",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0"
+    "svelte": "^3.0.0",
+    "tailwindcss": "^2.0.0"
   },
   "dependencies": {
+    "autoprefixer": "^10.4.0",
     "sirv-cli": "^1.0.0",
     "svelte-table": "^0.1.19"
   }
