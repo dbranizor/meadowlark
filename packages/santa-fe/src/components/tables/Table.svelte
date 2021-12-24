@@ -336,19 +336,3 @@
   </tbody>
 </table>
 
-<style>
-  table {
-    width: 100%;
-  }
-  .isSortable {
-    cursor: pointer;
-  }
-
-  .isClickable {
-    cursor: pointer;
-  }
-
-  tr th select {
-    width: 100%;
-  }
-</style>

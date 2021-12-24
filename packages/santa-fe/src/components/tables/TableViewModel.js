@@ -11,33 +11,38 @@ const InitTableViewModel = () => {
   const methods = {
     async init(schema) {
       return new Promise((res, rej) => {
-        TableModel.setSchema(schema);
-        bootstrap(schema).then(() => {
-          syncReady$.update((s) => {
-            TableModel.refresh();
-            syncReady = true;
-            return true;
+        if (schema && Object.keys(schema).length) {
+          TableModel.setSchema(schema);
+          bootstrap(schema).then(() => {
+            syncReady$.update((s) => {
+              TableModel.refresh();
+              syncReady = true;
+              return true;
+            });
+            res(true);
           });
+        }
 
-          unsubscribes.push(
-            TableModel.subscribe((res) => {
-              console.log("TableViewModel Picked up Update", res);
-              set(res[Object.keys(res)[0]] || []);
-            }),
-            MessageBus.subscribe(async (msg) => {
-              if (msg.message === "REFRESH" && msg.payload === "tables") {
-                console.log("Caught Tables Refresh...");
-                await TableModel.refresh();
-                console.log("Refreshed Tables");
-              } else {
-                console.log("Not Refreshing Tables");
-              }
-            })
-          );
-
-          res(true);
-        });
+        unsubscribes.push(
+          TableModel.subscribe((res) => {
+            console.log("TableViewModel Picked up Update", res);
+            set(res[Object.keys(res)[0]] || []);
+          }),
+          MessageBus.subscribe(async (msg) => {
+            if (msg.message === "REFRESH" && msg.payload === "tables") {
+              console.log("Caught Tables Refresh...");
+              await TableModel.refresh();
+              console.log("Refreshed Tables");
+            } else {
+              console.log("Not Refreshing Tables");
+            }
+          })
+        );
       });
+    },
+    async updateSchema(schema) {
+      console.log('dingo tbvm')
+      TableModel.updateSchema(schema);
     },
     async addBatch(rows = [], table) {
       if (syncReady) {
@@ -48,9 +53,9 @@ const InitTableViewModel = () => {
         }, Promise.resolve());
       }
     },
-    async delete(id, table){
-      console.log('Deleting', id);
-      TableModel.delete(id, table)
+    async delete(id, table) {
+      console.log("Deleting", id);
+      TableModel.delete(id, table);
     },
     async add(row, table) {
       await TableModel.insert(row, table);

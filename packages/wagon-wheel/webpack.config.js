@@ -27,6 +27,10 @@ function getConfig(name, entry, html) {
       filename: "bundle.js",
       path: path.resolve(__dirname, "public/dist"),
       chunkFilename: "[name].[id].js",
+      library: {
+        name: "santa-fe",
+        type: 'umd'
+      }
     },
     module: {
       rules: [
@@ -80,4 +84,4 @@ function getConfig(name, entry, html) {
   };
 }
 
-module.exports = [getConfig("bundle", "./src/index.js", "./public/index.html")];
+module.exports = [getConfig("bundle", "./src/main.js", "./public/index.html")];

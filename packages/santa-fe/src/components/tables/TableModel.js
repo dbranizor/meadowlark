@@ -4,7 +4,29 @@ import {
   writable,
   _delete,
   update as _update,
+  getWorker,
 } from "@meadowlark-labs/central";
+
+let getSchemaChanges = (schema1, schema2) => {
+  let updates = Object.keys(schema1)
+    .filter((s) => schema2[s] !== undefined)
+    .reduce((acc, curr) => {
+      console.log("dingo in reduce", curr);
+      Object.keys(schema1[curr]).forEach((v) => {
+        const update = { table: curr, column: v, type: schema1[curr][v] };
+        if (!schema2[curr][v] && !acc.includes(update)) {
+          acc = [...acc, update];
+        }
+      });
+      return acc;
+    }, []);
+
+  let creates = Object.keys(schema1)
+    .filter((s) => schema2[s] === undefined)
+    .map((key) => ({ [key]: schema1[key] }));
+
+  return { updates, creates };
+};
 
 const InitTableModel = () => {
   let _schema = {};
@@ -16,6 +38,53 @@ const InitTableModel = () => {
       const recordID = await insert(table, message);
       _rows[table] = [..._rows[table], message];
       set(JSON.parse(JSON.stringify(_rows)));
+    },
+    async updateSchema(schema) {
+      console.log('dingo tm')
+      let updates = getSchemaChanges(schema, _schema);
+      getWorker();
+      return new Promise((res, rej) => {
+        if (updates.creates) {
+          window.worker.postMessage({
+            type: "ui-invoke",
+            name: "init",
+            arguments: updates.creates,
+          });
+          return window.worker.addEventListener("message", function (e) {
+            if (e.data.type === "INITIALIZED_APP") {
+              if (updates.updates && updates.updates.length) {
+                window["worker"].postMessage({
+                  type: "UPDATE_SCHEMA",
+                  arguments: updates.updates,
+                });
+                return window.worker.addEventListener("message", function (e) {
+                  if (e.data.type === "UPDATED_SCHEMA") {
+                    console.log("Updated Schema");
+                    res();
+                  }
+                });
+              } else {
+                res();
+              }
+            }
+          });
+        } else {
+          if (updates.updates && updates.updates.length) {
+            window["worker"].postMessage({
+              type: "UPDATE_SCHEMA",
+              arguments: updates.updates,
+            });
+            return window.worker.addEventListener("message", function (e) {
+              if (e.data.type === "UPDATED_SCHEMA") {
+                console.log("Updated Schema");
+                res();
+              }
+            });
+          } else {
+            res();
+          }
+        }
+      });
     },
     async refresh(table = false) {
       if (table) {

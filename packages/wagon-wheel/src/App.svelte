@@ -1,8 +1,12 @@
 <script>
-  import { santaFe } from "@meadowlark-labs/santa-fe";
+  import { Tables } from "@meadowlark-labs/santa-fe";
+  import { onMount } from "svelte";
   let columnName, dataType, tableName;
   let selectedCOnstraint;
   let testUser = "John";
+  let schema = false;
+
+  onMount(() => console.log("dingo tables pure es6", Tables));
 
   const constraint = [
     { id: "", text: "" },
@@ -18,22 +22,21 @@
   let rows = [];
 
   $: databaseRows = columns.map(buildSqlTableRow);
-  $: uiRows = columns.map(buildUITableRow);
-  $: uiRows, console.log('Got UI DB Rows', uiRows)
-  $: databaseSchema = databaseRows.reduce((acc, curr) => {    
+  $: uiColumns = columns.map(buildUITableRow);
+  $: uiColumns, console.log("Got UI DB Rows", uiColumns);
+  $: tableSchema = databaseRows.reduce((acc, curr) => {
     acc[curr.tableName.trim()] = {
       ...acc[curr.tableName],
       [curr.key]: `${curr.type}`,
-    }
-    if(curr.constraint){
-      acc[curr.tableName.trim()][curr.key] = `${curr.key} ${curr.constraint}`
+    };
+    if (curr.constraint) {
+      acc[curr.tableName.trim()][curr.key] = `${curr.type} ${curr.constraint}`;
     }
 
     return acc;
-  }, {})
-  $: databaseRows, console.log('Got SQL Table Rows', databaseRows)
-  $: databaseSchema, console.log('Got Database Schema', databaseSchema)
-
+  }, {});
+  $: databaseRows, console.log("Got SQL Table Rows", databaseRows);
+  $: tableSchema, console.log("Got Database Schema", tableSchema);
 
   function buildUITableRow(tO) {
     return Object.keys(tO)
@@ -63,21 +66,13 @@
       ui_sortable: true,
       db_type: dataType.text,
       db_tableName: tableName,
-      db_constraint: selectedCOnstraint.text
+      db_constraint: selectedCOnstraint.text,
     };
     columns = [...columns, row];
   };
 
-  const addTable = async () => {
-    await santaFe({
-      localized: [["Table", schema]],
-      user_id: selectedUser,
-      sync_disabled: false,
-      sync_url: "https://localhost/central-park",
-      group_id: "meadowlark",
-      debug: true,
-      isOffline: true,
-    });
+  const addTable = () => {
+    schema = JSON.parse(JSON.stringify(tableSchema));
   };
 </script>
 
@@ -118,15 +113,17 @@
         class="ml-auto px-2 py-1 bg-green-500"
         on:click={handleAddingColumns}>Add Column</button
       >
-      <button class="px-2 py-1 bg-blue-500">Create Table</button>
+      <button class="px-2 py-1 bg-blue-500" on:click={addTable}
+        >Create Table</button
+      >
       <button class="px-2 py-1 bg-transparent border-red-500 border">
         Cancel
       </button>
     </div>
   </div>
 </div>
-<!-- <SvelteTable {columns} {rows} /> -->
 
+<Tables name="wagon-wheel" {rows} {columns} {schema} } />
 
 <style>
 </style>

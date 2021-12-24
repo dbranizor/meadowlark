@@ -2,7 +2,7 @@
   import { insert } from "@meadowlark-labs/central";
   import { onMount } from "svelte";
   import TableViewModel from "./TableViewModel.js";
-  import { santaFe } from "../../bootup";
+  import { santaFe } from "../../bootup.js";
   import Table from "./Table.svelte";
   import { Components } from "../../enum.js";
   import TableStore from "./TableStore.js";
@@ -16,9 +16,11 @@
   const unsubscribes = [];
   let appliedRows = [];
 
-  $:rows, applyRows(),
-   
+  $: rows, applyRows();
+  $: columns, applyColumns();
+  $: schema, applySchema();
   onMount(() => {
+    console.log('dingo onmount in tables')
     TableViewModel.syncReady$.subscribe((r) => {
       if (r) {
         unsubscribes.push(
@@ -40,6 +42,14 @@
     });
   });
 
+  async function applyColumns() {
+    console.log("dingo not applying schema");
+  }
+  async function applySchema() {
+    console.log('dingo appling schema')
+    await TableViewModel.updateSchema(schema);
+    console.log('dingo applied schema')
+  }
   async function applyRows() {
     const n = rows.filter((r) => !appliedRows.includes(r));
     try {
@@ -83,4 +93,4 @@
   });
 </script>
 
-<Table rows={displayedRows} {columns} editable={true} />
+<!-- <Table rows={displayedRows} {columns} editable={true} /> -->

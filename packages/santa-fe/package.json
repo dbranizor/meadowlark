@@ -2,9 +2,15 @@
   "name": "@meadowlark-labs/santa-fe",
   "version": "1.0.0",
   "private": true,
+  "module": "public/dist/bundle.mjs",
+  "main": "public/dist/bundle.js",
+  "files": [
+    "src",
+    "public/dist"
+  ],
   "scripts": {
     "build:tailwind": "postcss css/tailwind.css -o public/tailwind-out.css",
-    "build": "webpack",
+    "build": "rollup -c",
     "prebuild": "cp node_modules/@meadowlark-labs/central/lib/sync.js ./lib && cp  node_modules/@meadowlark-labs/central/lib/sql-wasm.wasm ./lib",
     "dev": "http-server public -p 8010",
     "start": "sirv public --no-clear"
@@ -24,7 +30,7 @@
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0",
+    "svelte": "3.39.0",
     "svelte-loader": "^3.1.2",
     "webpack": "^5.51.1",
     "webpack-cli": "^4.8.0",
