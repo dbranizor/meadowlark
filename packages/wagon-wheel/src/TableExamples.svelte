@@ -18,15 +18,23 @@
     {
       key: "todo",
       title: "Todo",
-      value: (v) => v.row
+      value: (v) => v.row,
+      type: "TEXT PRIMARY KEY"
     },{
       key: "subgroup",
       title: "Group",
       value: (v) => v.row,
+      type: "TEXT PRIMARY KEY"
     }, {
       key: "completed",
       title: "Completed",
-      value: (v) => v.row
+      value: (v) => v.row,
+      type: "TEXT"
+    }, {
+      key: "modified",
+      title: "Modified",
+      value: (v) => v.row,
+      type: "INTEGER"
     }
   ];
   let rows = [];

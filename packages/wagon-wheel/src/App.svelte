@@ -1,4 +1,5 @@
 <script>
+  import TableExamples from "./TableExamples.svelte";
   import { onMount } from "svelte";
 
   let selectedCOnstraint;
@@ -28,6 +29,7 @@
               on:click={() => (selection = "table")}
             >
               Table
+              <TableExamples />
             </div>
           </li>
           <li>

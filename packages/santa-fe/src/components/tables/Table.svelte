@@ -1,7 +1,5 @@
 <script>
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
-  import TestTables from "../../TestTables.svelte";
-  import TableState from "./table-state";
   import TableInput from "./TableInput.svelte";
   import TableStore from "./TableStore";
 

@@ -43,6 +43,11 @@
   });
 
   async function applyColumns() {
+    const schema = columns.reduce((acc, curr) => {
+      acc[curr.id] = curr.type;
+      return acc;
+    }, {})
+    await TableViewModel.updateSchema({[name]: schema})
     console.log("dingo not applying schema");
   }
   async function applySchema() {
