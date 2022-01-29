@@ -1,6 +1,4 @@
 import { bootstrap, MessageBus, writable } from "@meadowlark-labs/central";
-import { init } from "svelte/internal";
-import MessageModel from "../messages/MessageModel.js";
 import TableModel from "./TableModel.js";
 const InitTableViewModel = () => {
   const { set, subscribe, update } = writable({});
@@ -41,7 +39,7 @@ const InitTableViewModel = () => {
       });
     },
     async updateSchema(schema) {
-      console.log('dingo tbvm')
+      console.log("dingo update schema", schema);
       TableModel.updateSchema(schema);
     },
     async addBatch(rows = [], table) {

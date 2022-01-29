@@ -30,6 +30,18 @@ function createTable(db) {
 describe("Database functions", () => {
   let testDB;
 
+  it("should create sql from schema", () => {
+    const schema = {
+      todo: {
+        todo: "text primary key",
+        group: "text primary key",
+        subGroup: "text",
+        completed: "integer"
+      }
+    }
+
+    
+  })
   it("should be true", () => expect(true).to.be.true)
   // beforeEach(function () {
   //   testDB = openDb();

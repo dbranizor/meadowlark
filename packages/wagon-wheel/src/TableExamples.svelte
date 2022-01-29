@@ -1,46 +1,42 @@
 <script>
   import { Tables } from "@meadowlark-labs/santa-fe";
 
-
   // your script goes here
   let columnName, dataType, tableName, selectedCOnstraint;
 
-  const schema = {
-    todo: "TEXT",
-    subgroup: "TEXT",
-    completed: "INTEGER"
-  }
+
   const fieldType = [
     { id: "n", text: "Numeric" },
     { id: "s", text: "String" },
   ];
-  let  columns = [
+  let columns = [
     {
       key: "todo",
       title: "Todo",
       value: (v) => v.row,
-      type: "TEXT PRIMARY KEY"
-    },{
+      data_type: "TEXT PRIMARY KEY",
+    },
+    {
       key: "subgroup",
       title: "Group",
       value: (v) => v.row,
-      type: "TEXT PRIMARY KEY"
-    }, {
+      data_type: "TEXT PRIMARY KEY",
+    },
+    {
       key: "completed",
       title: "Completed",
       value: (v) => v.row,
-      type: "TEXT"
-    }, {
+      data_type: "TEXT",
+    },
+    {
       key: "modified",
       title: "Modified",
       value: (v) => v.row,
-      type: "INTEGER"
-    }
+      data_type: "INTEGER",
+    },
   ];
   let rows = [];
 
-
-  
   // $: databaseRows = columns.map(buildSqlTableRow);
   // $: uiColumns = columns.map(buildUITableRow);
   // $: uiColumns, console.log("Got UI DB Rows", uiColumns);
@@ -108,8 +104,8 @@
     </div>
     <div class="flex-row">
       <label for="">Constraint</label> -->
-      <!-- svelte-ignore component-name-lowercase -->
-      <!-- <select bind:value={dataType}>
+<!-- svelte-ignore component-name-lowercase -->
+<!-- <select bind:value={dataType}>
         {#each fieldType as fieldItem}
           <option value={fieldItem}>
             {fieldItem.text}
@@ -118,9 +114,9 @@
       </select>
     </div>
     <div class="flex-row"> -->
-      <!-- <label for="">Constraint</label> -->
-      <!-- svelte-ignore component-name-lowercase -->
-      <!-- <select bind:value={selectedCOnstraint}>
+<!-- <label for="">Constraint</label> -->
+<!-- svelte-ignore component-name-lowercase -->
+<!-- <select bind:value={selectedCOnstraint}>
         {#each constraint as item}
           <option value={item}>
             {item.text}
@@ -143,7 +139,7 @@
   </div>
 </div> -->
 
-<Tables name="wagon-wheel" {rows} {columns} {schema} } />
+<Tables name="wagon-wheel" {rows} {columns} />
 
 <style>
   /* your styles go here */

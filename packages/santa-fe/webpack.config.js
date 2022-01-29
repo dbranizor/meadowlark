@@ -80,4 +80,4 @@ function getConfig(name, entry, html) {
   };
 }
 
-module.exports = [getConfig("bundle", "./src/index.js", "./public/index.html")];
+module.exports = [getConfig("bundle", "./src/main.js", "./public/index.html")];

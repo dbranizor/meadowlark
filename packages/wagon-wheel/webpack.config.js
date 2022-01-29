@@ -27,10 +27,6 @@ function getConfig(name, entry, html) {
       filename: "bundle.js",
       path: path.resolve(__dirname, "public/dist"),
       chunkFilename: "[name].[id].js",
-      library: {
-        name: "santa-fe",
-        type: 'umd'
-      }
     },
     module: {
       rules: [

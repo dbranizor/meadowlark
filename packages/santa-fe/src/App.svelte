@@ -7,7 +7,7 @@
   import Messages from "./components/messages/Messages.svelte";
   import { santaFe } from "./bootup.js";
   import Modal from "./components/shared/Modal.svelte";
-import TestTables from "./TestTables.svelte";
+import ExampleTables from "../../wagon-wheel/src/ExampleTables.svelte";
 
   //start();
   const schema = {
@@ -153,7 +153,8 @@ import TestTables from "./TestTables.svelte";
       on:MESSAGES_APPLIED={() => (newMessage = "")}
       messages={displayedEvents}
     />
- `   <TestTables />`
+    <h5>dingo Example Table</h5>
+ `   <ExampleTables />`
   </div>
   <Modal bind:val={showEncModal}>
     <span slot="body">

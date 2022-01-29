@@ -16,11 +16,20 @@
   const unsubscribes = [];
   let appliedRows = [];
 
-  $: rows, applyRows();
+
+  const buildSchema = () =>
+    columns.reduce((acc, curr) => {
+      acc[curr.key] = curr.data_type;
+      return acc;
+    }, {});
+
   $: columns, applyColumns();
-  $: schema, applySchema();
+  $: rows, applyRows();
+  // $: columns, applyColumns();
+  // $: schema, applySchema();
+
   onMount(() => {
-    console.log('dingo onmount in tables')
+    console.log("dingo onmount in tables");
     TableViewModel.syncReady$.subscribe((r) => {
       if (r) {
         unsubscribes.push(
@@ -43,17 +52,13 @@
   });
 
   async function applyColumns() {
-    const schema = columns.reduce((acc, curr) => {
-      acc[curr.id] = curr.type;
-      return acc;
-    }, {})
-    await TableViewModel.updateSchema({[name]: schema})
+    await TableViewModel.updateSchema({ [name]: buildSchema() });
     console.log("dingo not applying schema");
   }
   async function applySchema() {
-    console.log('dingo appling schema')
+    console.log("dingo appling schema");
     await TableViewModel.updateSchema(schema);
-    console.log('dingo applied schema')
+    console.log("dingo applied schema");
   }
   async function applyRows() {
     const n = rows.filter((r) => !appliedRows.includes(r));
@@ -76,7 +81,7 @@
 
   const handleLocalized = async () => {
     return await santaFe({
-      localized: [[Components.TABLES, schema]],
+      localized: [[Components.TABLES, buildSchema()]],
       user_id: selectedUser,
       sync_disabled: false,
       sync_url: "https://localhost/central-park",

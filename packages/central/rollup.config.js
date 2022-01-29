@@ -9,5 +9,5 @@ export default [
       format: "es",
     },
     plugins: [resolve()],
-  },
+  }
 ];

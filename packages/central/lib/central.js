@@ -2764,6 +2764,7 @@ class WebDao {
     }
   }
   async run(sql) {
+    console.log('dingo running sql', sql);
     try {
       this._db.run(sql);
     } catch (error) {

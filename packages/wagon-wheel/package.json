@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rollup -c",
+    "oldprebuild": "cp node_modules/@meadowlark-labs/central/lib/sync.js ./public/lib && cp  node_modules/@meadowlark-labs/central/lib/sql-wasm.wasm ./public/lib",
+    "build": "webpack",
     "build:tailwind": "postcss css/tailwind.css -o public/tailwind-out.css",
     "dev": "http-server public -p 8001",
     "start": "sirv public -p 8001 --no-clear"
